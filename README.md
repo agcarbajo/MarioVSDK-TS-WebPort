@@ -19,17 +19,17 @@ quickly even on slow connections.
 | Path | What it is |
 |------|------------|
 | `overlay/` | Port-only files that are **added** on top of the game. Most importantly `scripts/chromium/*` — the NWF shims, the GTX texture runtime, the multi‑channel audio engine, the asset preloader, save handling, etc. Also `tools/` (the offline GTX→PNG converter). |
-| `patches/` | Unified diffs (one per file) describing every change the port makes to the **original** game scripts (50 files). These are applied on top of your game files at build time. `patches/_index.txt` lists what each patch targets. |
+| `patches/` | Unified diffs (one per file) describing every change the port makes to the **original** game files (game scripts plus a couple of layouts). These are applied on top of your game files at build time. `patches/_index.txt` lists what each patch targets. |
 | `build.py` | The build script. Combines your game files + `overlay/` + `patches/` into a runnable port. |
 
 ---
 
 ## Requirements
-* **Your own dump of Mario vs. Donkey Kong Tipping Stars** — the game must be in decrypted/loadiine format, build accepts either the **dump root** (the folder that contains `content/app/...`), or the **app folder** itself (the one that directly contains `scripts/` and `audio/`).
+* **Your own dump of Mario vs. Donkey Kong Tipping Stars** — the game must be in decrypted/loadiine format. The build accepts either the **dump root** (the folder that contains `content/app/...`), or the **app folder** itself (the one that directly contains `scripts/` and `audio/`).
 * **Python 3.7+** — runs the build, applies the patches, and converts the
   textures (no third‑party Python packages required).
 * **ffmpeg** *(optional but recommended)* — extracts the per‑world
-  level‑selection music tracks from the game's multi‑channel audio. If ffmpeg
+  level‑select music tracks from the game's multi‑channel audio. If ffmpeg
   is missing the build still succeeds; only the world‑specific level‑select
   tracks are skipped.
 
@@ -37,7 +37,14 @@ quickly even on slow connections.
 
 ## Build it
 
-From this folder:
+First, clone this repository and enter the folder:
+
+```bash
+git clone https://github.com/agcarbajo/MarioVSDK-TS-WebPort.git
+cd MarioVSDK-TS-WebPort
+```
+
+Then run the build, pointing `--src` at your own copy of the game files:
 
 ```bash
 python build.py --src "/path/to/your/game/files" --out build/chromium-port
@@ -59,7 +66,7 @@ The build will:
 
 1. copy your game files into the output folder,
 2. overlay the port-only files (`scripts/chromium`, `tools`),
-3. apply the 50 patches to the modified game scripts,
+3. apply the patches to the modified game files,
 4. convert the Wii U **GTX** textures to **PNG** (pure Python — ~338 texture
    bundles, so this step takes a few minutes),
 5. extract the per‑world level‑select music with ffmpeg (if available).
@@ -91,7 +98,7 @@ Then open <http://127.0.0.1:8765/>.
 
 If you change a **port-only** file, edit it under `overlay/` and rebuild.
 
-If you change one of the **original** game scripts, regenerate its patch from
+If you change one of the **original** game files, regenerate its patch from
 your built tree against the pristine original, e.g.:
 
 ```bash
@@ -107,7 +114,7 @@ to the app root, matching the other patches).
 
 ## Notes & limitations
 
-* Only tested with the EU version of the game, not sure how it will work with other regions.
+* Only tested with the EU version of the game; I'm not sure how it will work with other regions.
 * Online features (Miiverse, the community level sharing, etc.) are stubbed or
   disabled — this port targets **offline** play (story/solo, bonus, the level
   editor, local save).
