@@ -34,6 +34,8 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parent
 OVERLAY = REPO / "overlay"
 PATCHES = REPO / "patches"
+HOST_DIR = REPO / "host"
+DIST_DIR = REPO / "dist"
 
 # world N (1..7) -> stereo channel pair extracted from the 14-channel
 # level_select_full.ogg. Confirmed against the game's channel flags.
@@ -291,12 +293,87 @@ def extract_world_music(out: Path, ffmpeg: str, prog: Progress):
     return None
 
 
+def _has_module(python: str, module: str) -> bool:
+    return subprocess.run([python, "-c", "import %s" % module],
+                          stdout=subprocess.DEVNULL,
+                          stderr=subprocess.DEVNULL).returncode == 0
+
+
+def _frozen_app_paths(app_name: str):
+    """Return (report_dir, exe_path, web_dst) for the PyInstaller onedir output
+    on the current OS. report_dir is the folder to hand to the user."""
+    onedir = DIST_DIR / app_name
+    if sys.platform.startswith("win"):
+        exe = onedir / (app_name + ".exe")
+        return onedir, exe, onedir / "web"
+    if sys.platform == "darwin":
+        appbundle = DIST_DIR / (app_name + ".app")
+        if appbundle.is_dir():
+            macos = appbundle / "Contents" / "MacOS"
+            return appbundle, macos / app_name, appbundle / "Contents" / "Resources" / "web"
+        return onedir, onedir / app_name, onedir / "web"
+    return onedir, onedir / app_name, onedir / "web"  # linux
+
+
+def package_app(out: Path, app_name: str, python: str):
+    """Build a standalone desktop app (host + game) for the current OS."""
+    host_py = HOST_DIR / "host.py"
+    if not host_py.exists():
+        fail("host/host.py is missing; cannot package the app.")
+    if not _has_module(python, "PyInstaller"):
+        fail("PyInstaller is required for --package. Install it with:\n"
+             "        %s -m pip install pyinstaller" % python)
+
+    have_webview = _has_module(python, "webview")
+    mode = "native window (pywebview)" if have_webview else "default browser"
+    info("Packaging desktop app '%s' for %s [%s] ..." % (app_name, sys.platform, mode))
+    if not have_webview:
+        info("  tip: `%s -m pip install pywebview` before packaging to get a "
+             "native windowed app instead of opening the browser." % python)
+
+    work = REPO / "build" / "_pyinstaller"
+    cmd = [python, "-m", "PyInstaller", "--noconfirm", "--clean",
+           "--name", app_name,
+           "--distpath", str(DIST_DIR),
+           "--workpath", str(work),
+           "--specpath", str(work)]
+    if have_webview:
+        # GUI app (no console) + make sure pywebview's backend files are bundled.
+        cmd += ["--windowed", "--collect-all", "webview"]
+    cmd.append(str(host_py))
+
+    info("Running PyInstaller (this takes a moment) ...")
+    if subprocess.run(cmd).returncode != 0:
+        fail("PyInstaller failed to package the host.")
+
+    report_dir, exe, web_dst = _frozen_app_paths(app_name)
+    if not exe.exists():
+        fail("Packaged executable not found where expected: %s" % exe)
+
+    if web_dst.exists():
+        shutil.rmtree(web_dst)
+    web_dst.parent.mkdir(parents=True, exist_ok=True)
+    info("Copying the built game into the app: %s" % web_dst)
+    shutil.copytree(out, web_dst)
+
+    info("")
+    info("Desktop app ready:")
+    info("  executable: %s" % exe)
+    info("  folder:     %s" % report_dir)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Build the MvDK: Tipping Stars browser port.")
     ap.add_argument("--src", required=True,
                     help="Path to your original game files (dump root or app folder).")
     ap.add_argument("--out", default=str(REPO / "build" / "chromium-port"),
                     help="Output folder for the built port (default: build/chromium-port).")
+    ap.add_argument("--package", action="store_true",
+                    help="After building, also package a standalone desktop app "
+                         "(an executable + a folder of files) for the current OS, "
+                         "bundling a local host for the game.")
+    ap.add_argument("--app-name", default="MvDK-Tipping-Stars",
+                    help="Name for the packaged app/executable (default: MvDK-Tipping-Stars).")
     args = ap.parse_args()
 
     src = Path(os.path.abspath(os.path.expanduser(args.src)))
@@ -335,9 +412,17 @@ def main():
 
     info("")
     info("Build complete in %s: %s" % (_fmt_eta(time.time() - prog.start), out))
-    info("Serve it over HTTP (NOT file://), for example:")
-    info('    python -m http.server 8765 --bind 127.0.0.1 --directory "%s"' % out)
-    info("Then open http://127.0.0.1:8765/")
+
+    if args.package:
+        info("")
+        package_app(out, args.app_name, python)
+        info("")
+        info("Run the app by launching the executable above.")
+    else:
+        info("Serve it over HTTP (NOT file://), for example:")
+        info('    python -m http.server 8765 --bind 127.0.0.1 --directory "%s"' % out)
+        info("Then open http://127.0.0.1:8765/")
+        info("Or run `python build.py ... --package` to build a standalone desktop app.")
 
 
 if __name__ == "__main__":

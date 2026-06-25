@@ -94,6 +94,47 @@ Then open <http://127.0.0.1:8765/>.
 
 ---
 
+## Standalone desktop app
+
+You can also package everything — the game **and** a local host — into a single
+desktop app for your current operating system, so it launches by double-clicking
+instead of starting a web server by hand:
+
+```bash
+python build.py --src "/path/to/your/game/files" --package
+```
+
+This produces, under `dist/`, **an executable plus a folder of files** built for
+the OS you run it on, e.g. on Windows:
+
+```
+dist/MvDK-Tipping-Stars/
+├── MvDK-Tipping-Stars.exe   <- launch this
+├── _internal/               <- runtime files
+└── web/                     <- the built game
+```
+
+Keep the folder's contents together and run the executable to play. Use
+`--app-name NAME` to change the name.
+
+The app starts a private localhost web server and shows the game in a window:
+
+* with **[pywebview](https://pywebview.flowlib.org/)** installed it opens a
+  **native window** rendered by your system's built-in Chromium/WebKit webview
+  (on Windows, the Edge **WebView2** runtime);
+* without it, the app falls back to opening the game in your **default browser**.
+
+Extra requirements for `--package`:
+
+* **PyInstaller** — `pip install pyinstaller` (does the packaging).
+* **pywebview** *(optional)* — `pip install pywebview` for the native window;
+  otherwise the browser fallback is used.
+
+> The app is built for the OS you run the command on — PyInstaller does not
+> cross-compile, so build the Windows app on Windows, the macOS app on macOS, etc.
+
+---
+
 ## Updating the port
 
 If you change a **port-only** file, edit it under `overlay/` and rebuild.
