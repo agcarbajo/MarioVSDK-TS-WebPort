@@ -1,13 +1,21 @@
 import gzip
 import json
+import multiprocessing
+import os
 import pathlib
 import struct
 import sys
+import time
 import zlib
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 OUT = ROOT / "converted"
+
+# PNG zlib level for the converted textures. These are small UI/sprite atlases
+# rebuilt locally, so favour speed over a few extra KB. Level 6 is a good
+# speed/size balance and noticeably faster than the previous level 9.
+PNG_COMPRESS_LEVEL = 6
 
 
 def be32(data, offset):
@@ -135,7 +143,7 @@ def png_rgba(width, height, rgba):
         raw.append(0)
         raw.extend(rgba[y * stride:(y + 1) * stride])
     payload = b"".join(chunks(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 6, 0, 0, 0)))
-    payload += b"".join(chunks(b"IDAT", zlib.compress(bytes(raw), 9)))
+    payload += b"".join(chunks(b"IDAT", zlib.compress(bytes(raw), PNG_COMPRESS_LEVEL)))
     payload += b"".join(chunks(b"IEND", b""))
     return b"\x89PNG\r\n\x1a\n" + payload
 
@@ -324,33 +332,103 @@ def convert_one(path):
     }
 
 
+def _fmt_eta(seconds):
+    if seconds is None or seconds < 0:
+        return "--:--"
+    seconds = int(seconds)
+    return "%d:%02d" % (seconds // 60, seconds % 60)
+
+
 def main():
+    args = sys.argv[1:]
+    porcelain = False
+    jobs = None
+    explicit = []
+    i = 0
+    while i < len(args):
+        a = args[i]
+        if a == "--porcelain":
+            porcelain = True
+        elif a == "--jobs":
+            i += 1
+            jobs = int(args[i])
+        elif a.startswith("--jobs="):
+            jobs = int(a.split("=", 1)[1])
+        else:
+            explicit.append(a)
+        i += 1
+
     OUT.mkdir(parents=True, exist_ok=True)
+    paths = [ROOT / x for x in explicit] if explicit else sorted(ROOT.rglob("*.gtx.gz"))
+    total = len(paths)
+
+    if jobs is None:
+        jobs = os.cpu_count() or 1
+    jobs = max(1, min(jobs, total or 1))
+
     manifest = {}
     unsupported = []
-    if len(sys.argv) > 1:
-        paths = [ROOT / arg for arg in sys.argv[1:]]
-    else:
-        paths = sorted(ROOT.rglob("*.gtx.gz"))
-    for path in paths:
-        item = convert_one(path)
+    done = 0
+    start = time.time()
+
+    def report():
+        if porcelain:
+            sys.stdout.write("PROGRESS %d %d\n" % (done, total))
+            sys.stdout.flush()
+        else:
+            frac = done / total if total else 1.0
+            elapsed = time.time() - start
+            eta = (elapsed * (1 - frac) / frac) if frac > 0 else None
+            sys.stdout.write("\r[convert] %3d%% (%d/%d)  ETA %s   "
+                             % (round(frac * 100), done, total, _fmt_eta(eta)))
+            sys.stdout.flush()
+
+    def handle(item):
+        nonlocal done
         manifest[item["source"]] = item
         if not item["supported"]:
             unsupported.append(item)
+        done += 1
+        report()
+
+    if jobs > 1 and total > 1:
+        # Convert bundles across CPU cores; each worker decodes one bundle and
+        # writes its own PNGs, so there are no write conflicts.
+        pool = multiprocessing.Pool(processes=jobs)
+        try:
+            for item in pool.imap_unordered(convert_one, paths):
+                handle(item)
+            pool.close()
+        finally:
+            pool.join()
+    else:
+        for path in paths:
+            handle(convert_one(path))
+
+    if not porcelain and total:
+        sys.stdout.write("\n")
+
     manifest_path = OUT / "gtx-manifest.json"
-    if len(sys.argv) > 1 and manifest_path.exists():
+    if explicit and manifest_path.exists():
         merged = json.loads(manifest_path.read_text(encoding="utf-8"))
         merged.update(manifest)
         manifest = merged
     manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+
     if unsupported:
-        print("Unsupported GTX surfaces:", file=sys.stderr)
         for item in unsupported:
             formats = sorted({hex(s["format"]) for s in item["surfaces"] if s["format"] != 0x1A})
-            print(f"  {item['source']}: {', '.join(formats)}", file=sys.stderr)
+            msg = "%s: %s" % (item["source"], ", ".join(formats))
+            if porcelain:
+                sys.stdout.write("WARN unsupported GTX surfaces: " + msg + "\n")
+            else:
+                print("Unsupported GTX surfaces: " + msg, file=sys.stderr)
+        if porcelain:
+            sys.stdout.flush()
         return 1
     return 0
 
 
 if __name__ == "__main__":
+    multiprocessing.freeze_support()
     raise SystemExit(main())

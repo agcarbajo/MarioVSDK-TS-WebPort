@@ -19,7 +19,7 @@ quickly even on slow connections.
 | Path | What it is |
 |------|------------|
 | `overlay/` | Port-only files that are **added** on top of the game. Most importantly `scripts/chromium/*` — the NWF shims, the GTX texture runtime, the multi‑channel audio engine, the asset preloader, save handling, etc. Also `tools/` (the offline GTX→PNG converter). |
-| `patches/` | Unified diffs (one per file) describing every change the port makes to the **original** game scripts (50 files). These are applied on top of your game files at build time. `patches/_index.txt` lists what each patch targets. |
+| `patches/` | Unified diffs (one per file) describing every change the port makes to the **original** game files (scripts and a couple of layouts). These are applied on top of your game files at build time. `patches/_index.txt` lists what each patch targets. |
 | `build.py` | The build script. Combines your game files + `overlay/` + `patches/` into a runnable port. |
 
 ---
@@ -72,9 +72,9 @@ The build will:
 
 1. copy your game files into the output folder,
 2. overlay the port-only files (`scripts/chromium`, `tools`),
-3. apply the 50 patches to the modified game scripts,
-4. convert the Wii U **GTX** textures to **PNG** (pure Python — ~338 texture
-   bundles, so this step takes a few minutes),
+3. apply the patches to the modified game scripts,
+4. convert the Wii U **GTX** textures to **PNG** (pure Python, ~338 bundles,
+   converted in parallel across your CPU cores),
 5. extract the per‑world level‑select music with ffmpeg (if available).
 
 ---

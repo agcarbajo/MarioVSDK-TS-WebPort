@@ -28,6 +28,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent
@@ -45,6 +46,58 @@ def warn(msg):  print("[build] WARNING: " + msg)
 def fail(msg):
     print("[build] ERROR: " + msg, file=sys.stderr)
     sys.exit(1)
+
+
+def _fmt_eta(seconds):
+    if seconds is None or seconds < 0:
+        return "--:--"
+    seconds = int(seconds)
+    if seconds >= 3600:
+        return "%d:%02d:%02d" % (seconds // 3600, (seconds % 3600) // 60, seconds % 60)
+    return "%d:%02d" % (seconds // 60, seconds % 60)
+
+
+class Progress:
+    """Single-line, live build progress: overall %, current task %, and ETA.
+
+    Each stage is given a rough weight (its expected share of total build time)
+    so the overall percentage advances smoothly across stages, and the ETA is
+    derived from elapsed time versus overall fraction done."""
+
+    STAGES = [
+        ("Copying game files",   30),
+        ("Overlaying port files", 2),
+        ("Applying patches",      3),
+        ("Converting textures",  50),
+        ("Extracting music",     15),
+    ]
+
+    def __init__(self):
+        self.total_w = sum(w for _, w in self.STAGES)
+        self.start = time.time()
+        self.name = ""
+        self.weight = 0
+        self.before = 0
+
+    def stage(self, index):
+        self.name, self.weight = self.STAGES[index]
+        self.before = sum(w for _, w in self.STAGES[:index])
+        self.update(0.0)
+
+    def update(self, frac):
+        frac = 0.0 if frac < 0 else (1.0 if frac > 1 else frac)
+        overall = (self.before + self.weight * frac) / self.total_w
+        elapsed = time.time() - self.start
+        eta = (elapsed * (1 - overall) / overall) if overall > 0.02 else None
+        line = "[build] total %3d%%  |  %-21s %3d%%  |  ETA %s" % (
+            round(overall * 100), self.name, round(frac * 100), _fmt_eta(eta))
+        sys.stdout.write("\r" + line + "    ")
+        sys.stdout.flush()
+
+    def done_stage(self):
+        self.update(1.0)
+        sys.stdout.write("\n")
+        sys.stdout.flush()
 
 
 def find_app_root(src: Path) -> Path:
@@ -66,24 +119,27 @@ def find_app_root(src: Path) -> Path:
          "contains both 'scripts/' and 'audio/') under: %s" % src)
 
 
-def copy_original(app_root: Path, out: Path):
+def copy_original(app_root: Path, out: Path, prog: Progress):
     if out.exists():
-        info("Cleaning existing output folder: %s" % out)
         shutil.rmtree(out)
-    info("Copying original game files -> %s" % out)
-    shutil.copytree(app_root, out)
+    files = [p for p in app_root.rglob("*") if p.is_file()]
+    total = len(files) or 1
+    for n, src in enumerate(files, 1):
+        dst = out / src.relative_to(app_root)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        if n % 40 == 0 or n == total:
+            prog.update(n / total)
 
 
-def apply_overlay(out: Path):
-    n = 0
-    for path in OVERLAY.rglob("*"):
-        if path.is_file():
-            rel = path.relative_to(OVERLAY)
-            dst = out / rel
-            dst.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(path, dst)
-            n += 1
-    info("Overlaid %d port-only file(s)." % n)
+def apply_overlay(out: Path, prog: Progress):
+    files = [p for p in OVERLAY.rglob("*") if p.is_file()]
+    total = len(files) or 1
+    for n, path in enumerate(files, 1):
+        dst = out / path.relative_to(OVERLAY)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(path, dst)
+        prog.update(n / total)
 
 
 def _apply_unified_diff(target_bytes: bytes, patch_bytes: bytes) -> bytes:
@@ -150,62 +206,76 @@ def _apply_unified_diff(target_bytes: bytes, patch_bytes: bytes) -> bytes:
     return body_text.encode("latin-1")
 
 
-def apply_patches(out: Path):
+def apply_patches(out: Path, prog: Progress):
     patch_files = sorted(p for p in PATCHES.glob("*.patch"))
     if not patch_files:
         warn("No patch files found in %s" % PATCHES)
         return
+    total = len(patch_files)
     failed = []
-    for patch in patch_files:
+    for n, patch in enumerate(patch_files, 1):
         pb = patch.read_bytes()
         m = re.search(rb"^\+\+\+ b/(.+)$", pb, re.M)
         if not m:
             failed.append((patch.name, "could not read target path from patch"))
-            continue
-        rel = m.group(1).decode("latin-1").strip()
-        target = out / rel
-        if not target.exists():
-            failed.append((patch.name, "target file missing: %s" % rel))
-            continue
-        try:
-            target.write_bytes(_apply_unified_diff(target.read_bytes(), pb))
-        except Exception as ex:  # noqa: BLE001
-            failed.append((patch.name, str(ex)))
+        else:
+            rel = m.group(1).decode("latin-1").strip()
+            target = out / rel
+            if not target.exists():
+                failed.append((patch.name, "target file missing: %s" % rel))
+            else:
+                try:
+                    target.write_bytes(_apply_unified_diff(target.read_bytes(), pb))
+                except Exception as ex:  # noqa: BLE001
+                    failed.append((patch.name, str(ex)))
+        prog.update(n / total)
     if failed:
+        sys.stdout.write("\n")
         for name, err in failed:
             warn("patch failed: %s -> %s" % (name, err))
         fail("%d patch(es) did not apply. Your game files are probably a "
              "different version than this port targets (EU)." % len(failed))
-    info("Applied %d patch(es)." % len(patch_files))
 
 
-def convert_textures(out: Path, python: str):
+def convert_textures(out: Path, python: str, prog: Progress):
+    """Run the parallel GTX->PNG converter, streaming its progress.
+
+    Returns (warnings, returncode). The converter emits machine-readable
+    'PROGRESS done total' lines (one per finished bundle) which drive the
+    progress bar, plus 'WARN ...' lines for unsupported surfaces."""
     script = out / "tools" / "convert_gtx.py"
     if not script.exists():
         fail("convert_gtx.py missing from overlay/tools.")
-    info("Converting GTX textures to PNG (~338 bundles; this can take "
-         "several minutes)...")
-    res = subprocess.run([python, str(script)], cwd=str(out))
-    # convert_gtx returns non-zero only if some surfaces are unsupported;
-    # the supported ones are still written. Surface a warning, don't abort.
-    if res.returncode != 0:
-        warn("convert_gtx.py reported unsupported GTX surfaces (see above). "
-             "Converted assets that are supported were still written.")
-    info("Texture conversion done -> %s" % (out / "converted"))
+    proc = subprocess.Popen(
+        [python, "-u", str(script), "--porcelain"],
+        cwd=str(out), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
+    warns = []
+    other = []
+    for line in proc.stdout:
+        line = line.rstrip("\n")
+        if line.startswith("PROGRESS"):
+            parts = line.split()
+            if len(parts) == 3:
+                done, total = int(parts[1]), int(parts[2]) or 1
+                prog.update(done / total)
+        elif line.startswith("WARN "):
+            warns.append(line[5:].strip())
+        elif line.strip():
+            other.append(line)
+    proc.wait()
+    if proc.returncode != 0 and not warns and other:
+        warns.extend(other[-5:])
+    return warns, proc.returncode
 
 
-def extract_world_music(out: Path, ffmpeg: str):
+def extract_world_music(out: Path, ffmpeg: str, prog: Progress):
     full = out / LEVEL_SELECT_FULL
-    if not full.exists():
-        warn("%s not found; skipping per-world level-select music. The world "
-             "selection screen will still work but world-specific tracks may "
-             "fall back." % LEVEL_SELECT_FULL)
-        return
-    if not ffmpeg:
-        warn("ffmpeg not found on PATH; skipping per-world level-select music "
-             "extraction. Install ffmpeg and re-run to enable it.")
-        return
-    info("Extracting %d per-world level-select tracks with ffmpeg..." % WORLD_TRACK_COUNT)
+    if not full.exists() or not ffmpeg:
+        prog.update(1.0)
+        if not full.exists():
+            return "%s not found; skipping per-world level-select music." % LEVEL_SELECT_FULL
+        return ("ffmpeg not found on PATH; skipping per-world level-select music. "
+                "Install ffmpeg and re-run to enable it.")
     for world in range(1, WORLD_TRACK_COUNT + 1):
         left = 2 * (world - 1)
         right = left + 1
@@ -214,11 +284,11 @@ def extract_world_music(out: Path, ffmpeg: str):
                "-af", "pan=stereo|c0=c%d|c1=c%d" % (left, right),
                "-c:a", "libvorbis", "-q:a", "6", str(dst)]
         res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        prog.update(world / WORLD_TRACK_COUNT)
         if res.returncode != 0:
-            warn("ffmpeg failed for world %d:\n        %s"
-                 % (world, res.stderr.decode("utf-8", "replace").strip()))
-            return
-    info("Per-world level-select music extracted.")
+            return ("ffmpeg failed for world %d: %s"
+                    % (world, res.stderr.decode("utf-8", "replace").strip()))
+    return None
 
 
 def main():
@@ -239,15 +309,32 @@ def main():
 
     app_root = find_app_root(src)
     info("Using game files from: %s" % app_root)
+    info("Building -> %s" % out)
 
-    copy_original(app_root, out)
-    apply_overlay(out)
-    apply_patches(out)
-    convert_textures(out, python)
-    extract_world_music(out, ffmpeg)
+    prog = Progress()
+
+    prog.stage(0); copy_original(app_root, out, prog); prog.done_stage()
+    prog.stage(1); apply_overlay(out, prog); prog.done_stage()
+    prog.stage(2); apply_patches(out, prog); prog.done_stage()
+
+    prog.stage(3)
+    conv_warns, conv_rc = convert_textures(out, python, prog)
+    prog.done_stage()
+    if conv_rc != 0 or conv_warns:
+        for w in conv_warns:
+            warn("texture conversion: " + w)
+        if conv_rc != 0:
+            warn("some GTX surfaces were unsupported; supported assets were "
+                 "still written.")
+
+    prog.stage(4)
+    music_err = extract_world_music(out, ffmpeg, prog)
+    prog.done_stage()
+    if music_err:
+        warn(music_err)
 
     info("")
-    info("Build complete: %s" % out)
+    info("Build complete in %s: %s" % (_fmt_eta(time.time() - prog.start), out))
     info("Serve it over HTTP (NOT file://), for example:")
     info('    python -m http.server 8765 --bind 127.0.0.1 --directory "%s"' % out)
     info("Then open http://127.0.0.1:8765/")
