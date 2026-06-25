@@ -1,47 +1,34 @@
 diff --git a/scripts/ui/title/TitleContainer.js b/scripts/ui/title/TitleContainer.js
-index 42fc768..a36d254 100644
+index 42fc768..af78706 100644
 --- a/scripts/ui/title/TitleContainer.js
 +++ b/scripts/ui/title/TitleContainer.js
-@@ -49,12 +49,18 @@ var ui;
-         };
- 
-         TitleContainer.prototype._goto = function (btn, newView) {
--            if (btn.genericButtonAction()) {
--                var ugcCurrent = pt.storage.getUGCCurrent();
--                var msg;
--                this._exitTo = newView;
--
--                switch (newView) {
-+            if (btn.genericButtonAction()) {
-+                var ugcCurrent = pt.storage.getUGCCurrent();
-+                var msg;
-+                this._exitTo = newView;
+@@ -53,9 +53,19 @@ var ui;
+                 var ugcCurrent = pt.storage.getUGCCurrent();
+                 var msg;
+                 this._exitTo = newView;
 +                if (window.ChromiumPortAssetPreloader && window.ChromiumPortAssetPreloader.onTitleChoice) {
 +                    window.ChromiumPortAssetPreloader.onTitleChoice(newView);
 +                }
 +                if ((newView === 'community' || newView === 'workshop') && window.ChromiumPortAssetPreloader) {
 +                    window.ChromiumPortAssetPreloader.preloadWorkshopAssets();
 +                }
-+
-+                switch (newView) {
+ 
+                 switch (newView) {
                      case 'community':
++                        if (window.ChromiumPortCommunity && !window.ChromiumPortCommunity.isReady()) {
++                            window.ChromiumPortCommunity.requireSetup();
++                            return;
++                        }
                          if (!ugcCurrent.permissionGranted) {
                              this._permissionsFlow.completeSignal.addOnce(this._exitToCommunity, this);
-@@ -174,10 +180,13 @@ var ui;
-             this.play('title_sky_clouds2');
-             this.play('title_sky_clouds3');
  
--            if (!ui.RewardContainer.needsUnlockDialog()) {
--                this.playMusic();
--            }
--        };
-+            if (!ui.RewardContainer.needsUnlockDialog()) {
-+                this.playMusic();
-+            }
+@@ -177,6 +187,9 @@ var ui;
+             if (!ui.RewardContainer.needsUnlockDialog()) {
+                 this.playMusic();
+             }
 +            if (window.ChromiumPortAssetPreloader) {
 +                window.ChromiumPortAssetPreloader.onTitleIdle();
 +            }
-+        };
+         };
          return TitleContainer;
      })(ui.UIContainer);
-     ui.TitleContainer = TitleContainer;
