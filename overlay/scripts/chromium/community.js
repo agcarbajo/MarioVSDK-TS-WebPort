@@ -121,7 +121,7 @@
         var css = document.createElement("style");
         css.id = "chromium-port-community-style";
         css.textContent =
-            "#" + OVERLAY_ID + "{position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;" +
+            "#" + OVERLAY_ID + "{position:fixed;inset:0;z-index:2000000;display:flex;align-items:center;justify-content:center;" +
             "background:rgba(4,28,60,.55);font-family:Arial,Helvetica,sans-serif;}" +
             "#" + OVERLAY_ID + " .cw-box{width:min(520px,92vw);max-height:92vh;overflow:auto;border-radius:18px;" +
             "background:linear-gradient(180deg,#5eb6ff 0%,#90dcff 45%,#65b7ec 100%);" +
@@ -144,7 +144,20 @@
             "#" + OVERLAY_ID + " .cw-status{font-size:13px;font-weight:700;margin-top:8px;min-height:18px;}" +
             "#" + OVERLAY_ID + " .cw-ok{color:#1d7a33;} #" + OVERLAY_ID + " .cw-err{color:#c0263a;}" +
             "#" + OVERLAY_ID + " .cw-foot{display:flex;justify-content:flex-end;gap:10px;}" +
-            "#" + OVERLAY_ID + " .cw-hint{color:#37475f;font-size:12px;margin:2px 0 10px;}";
+            "#" + OVERLAY_ID + " .cw-hint{color:#37475f;font-size:12px;margin:2px 0 10px;}" +
+            "#" + OVERLAY_ID + " .cw-box.cw-wide{width:min(720px,94vw);}" +
+            "#" + OVERLAY_ID + " .cw-toolbar{display:flex;gap:8px;align-items:center;margin-bottom:12px;}" +
+            "#" + OVERLAY_ID + " .cw-toolbar .cw-grow{flex:1;}" +
+            "#" + OVERLAY_ID + " .cw-list{display:grid;gap:10px;}" +
+            "#" + OVERLAY_ID + " .cw-lvl{display:flex;gap:12px;align-items:center;background:#fff;border-radius:12px;padding:10px 12px;cursor:pointer;border:2px solid transparent;}" +
+            "#" + OVERLAY_ID + " .cw-lvl:hover{border-color:#ffc629;}" +
+            "#" + OVERLAY_ID + " .cw-lvl img{width:56px;height:56px;border-radius:8px;object-fit:cover;background:#dfe8f5;flex:0 0 auto;}" +
+            "#" + OVERLAY_ID + " .cw-lvl .cw-li{flex:1;min-width:0;}" +
+            "#" + OVERLAY_ID + " .cw-lvl b{display:block;color:#0a3d72;font-size:15px;}" +
+            "#" + OVERLAY_ID + " .cw-lvl small{color:#5a6c86;}" +
+            "#" + OVERLAY_ID + " .cw-empty{color:#37475f;text-align:center;padding:24px;}" +
+            "#" + OVERLAY_ID + " .cw-cmt{background:#fff;border-radius:10px;padding:8px 10px;margin-bottom:6px;}" +
+            "#" + OVERLAY_ID + " .cw-cmt b{color:#0a4c93;font-size:13px;} #" + OVERLAY_ID + " .cw-cmt span{display:block;color:#33455e;font-size:13px;}";
         document.head.appendChild(css);
     }
 
@@ -152,7 +165,10 @@
 
     function close() {
         var el = document.getElementById(OVERLAY_ID);
-        if (el) el.parentNode.removeChild(el);
+        if (el) {
+            if (el.__keyGuard) document.removeEventListener("keydown", el.__keyGuard, true);
+            el.parentNode.removeChild(el);
+        }
     }
 
     function open(onReady) {
@@ -196,6 +212,23 @@
               '</div>' +
             '</div>';
         document.body.appendChild(overlay);
+
+        // Keep all interaction inside the overlay: the game listens for pointer
+        // and keyboard events on document, so without this clicks "tap through"
+        // to the game behind and text fields cannot be focused. We stop these
+        // events at the overlay (without preventDefault, so inputs still work).
+        ["pointerdown", "pointerup", "pointermove", "mousedown", "mouseup",
+         "click", "dblclick", "touchstart", "touchend", "touchmove", "wheel",
+         "keydown", "keyup", "keypress", "contextmenu"].forEach(function (t) {
+            overlay.addEventListener(t, function (e) { e.stopPropagation(); }, false);
+        });
+        // Also swallow keyboard while the window is open even if focus is outside
+        // an input, so arrow keys / space don't drive the game underneath.
+        overlay.__keyGuard = function (e) {
+            var inOverlay = overlay.contains(e.target);
+            if (!inOverlay) { e.stopPropagation(); e.preventDefault(); }
+        };
+        document.addEventListener("keydown", overlay.__keyGuard, true);
 
         var $ = function (id) { return document.getElementById(id); };
         $("cw-server").value = state.server || "";
@@ -261,21 +294,181 @@
 
     function requireSetup(onReady) { open(onReady); }
 
+    // ------------------------------------------------ community browser ----
+    function makeShell(wide) {
+        injectStyles();
+        close();
+        var overlay = document.createElement("div");
+        overlay.id = OVERLAY_ID;
+        overlay.innerHTML = '<div class="cw-box ' + (wide ? "cw-wide" : "") + '">' +
+            '<div class="cw-head">Comunidad<button class="cw-x" title="Cerrar">&times;</button></div>' +
+            '<div class="cw-body"></div></div>';
+        document.body.appendChild(overlay);
+        ["pointerdown", "pointerup", "pointermove", "mousedown", "mouseup",
+         "click", "dblclick", "touchstart", "touchend", "touchmove", "wheel",
+         "keydown", "keyup", "keypress", "contextmenu"].forEach(function (t) {
+            overlay.addEventListener(t, function (e) { e.stopPropagation(); }, false);
+        });
+        overlay.__keyGuard = function (e) {
+            if (!overlay.contains(e.target)) { e.stopPropagation(); e.preventDefault(); }
+        };
+        document.addEventListener("keydown", overlay.__keyGuard, true);
+        overlay.querySelector(".cw-x").onclick = close;
+        return { overlay: overlay, body: overlay.querySelector(".cw-body") };
+    }
+
+    function esc(s) {
+        return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) {
+            return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+        });
+    }
+
+    function openBrowser() {
+        if (!isReady()) { open(function () { openBrowser(); }); return; }
+        var shell = makeShell(true);
+        showLevelList(shell.body);
+    }
+
+    function showLevelList(body) {
+        body.innerHTML =
+            '<div class="cw-toolbar">' +
+              '<div class="cw-grow cw-hint" id="cw-count">Cargando niveles…</div>' +
+              '<button class="cw-btn cw-sec" id="cw-refresh">↻</button>' +
+              '<button class="cw-btn" id="cw-upload">Subir nivel</button>' +
+            '</div><div class="cw-list" id="cw-list"></div>';
+        document.getElementById("cw-refresh").onclick = function () { showLevelList(body); };
+        document.getElementById("cw-upload").onclick = function () { uploadCurrentLevel(body); };
+        rest.listLevels("sort=new&limit=100").then(function (r) {
+            var list = document.getElementById("cw-list");
+            document.getElementById("cw-count").textContent = r.total + " nivel(es) en la comunidad";
+            if (!r.levels.length) { list.innerHTML = '<div class="cw-empty">Todavía no hay niveles. ¡Sé el primero en subir uno!</div>'; return; }
+            list.innerHTML = "";
+            r.levels.forEach(function (l) {
+                var row = document.createElement("div");
+                row.className = "cw-lvl";
+                row.innerHTML = (l.thumbnail ? '<img src="' + base() + l.thumbnail + '">' : '<img>') +
+                    '<div class="cw-li"><b>' + esc(l.title) + '</b>' +
+                    '<small>por ' + esc(l.authorName) + ' · ⭐ ' + l.stars + ' · ⬇ ' + l.downloads + ' · 💬 ' + l.comments + '</small></div>';
+                row.onclick = function () { showLevelDetail(body, l.id); };
+                list.appendChild(row);
+            });
+        }).catch(function (e) {
+            document.getElementById("cw-count").textContent = "Error al cargar: " + e.message;
+        });
+    }
+
+    function showLevelDetail(body, levelId) {
+        body.innerHTML = '<div class="cw-hint">Cargando…</div>';
+        rest.getLevel(levelId).then(function (l) {
+            body.innerHTML =
+                '<div class="cw-toolbar"><button class="cw-btn cw-sec" id="cw-back">← Volver</button><div class="cw-grow"></div></div>' +
+                '<div class="cw-card"><div class="cw-row">' +
+                  (l.thumbnail ? '<img class="cw-ava" src="' + base() + l.thumbnail + '">' : '') +
+                  '<div style="flex:1"><h3 style="margin:0">' + esc(l.title) + '</h3>' +
+                  '<div class="cw-hint">por ' + esc(l.authorName) + ' · ⭐ <span id="cw-stars">' + l.stars + '</span> · ⬇ ' + l.downloads + '</div></div>' +
+                '</div>' +
+                '<div class="cw-foot" style="justify-content:flex-start;margin-top:10px">' +
+                  '<button class="cw-btn" id="cw-play">Jugar</button>' +
+                  '<button class="cw-btn cw-sec" id="cw-star">⭐ Dar estrella</button></div>' +
+                '<div class="cw-status" id="cw-detail-status"></div></div>' +
+                '<div class="cw-card"><h3>COMENTARIOS</h3><div id="cw-comments"></div>' +
+                  '<div class="cw-row" style="margin-top:8px"><input type="text" id="cw-comment" maxlength="280" placeholder="Escribe un comentario…" style="flex:1"/>' +
+                  '<button class="cw-btn cw-sec" id="cw-send">Enviar</button></div></div>';
+            document.getElementById("cw-back").onclick = function () { showLevelList(body); };
+            document.getElementById("cw-play").onclick = function () { playLevel(l); };
+            document.getElementById("cw-star").onclick = function () {
+                rest.starLevel(l.id).then(function (s) { document.getElementById("cw-stars").textContent = s.stars; });
+            };
+            document.getElementById("cw-send").onclick = function () {
+                var inp = document.getElementById("cw-comment");
+                var txt = inp.value.trim(); if (!txt) return;
+                rest.addComment(l.id, txt).then(function () { inp.value = ""; loadComments(l.id); });
+            };
+            loadComments(l.id);
+        }).catch(function (e) { body.innerHTML = '<div class="cw-empty">Error: ' + esc(e.message) + '</div>'; });
+    }
+
+    function loadComments(levelId) {
+        rest.getComments(levelId).then(function (r) {
+            var c = document.getElementById("cw-comments");
+            if (!c) return;
+            if (!r.comments.length) { c.innerHTML = '<div class="cw-hint">Sin comentarios todavía.</div>'; return; }
+            c.innerHTML = r.comments.map(function (m) {
+                return '<div class="cw-cmt"><b>' + esc(m.userName) + '</b><span>' + esc(m.text) + '</span></div>';
+            }).join("");
+        });
+    }
+
+    function playLevel(level) {
+        try {
+            if (level && level.data && global.pt && global.window && window.signals && window.signals.loadLevel) {
+                var mode = (global.pt.GAME_MODE_DOWNLOADED) || "downloaded";
+                close();
+                window.signals.loadLevel.dispatch(level.data, mode, 0, 0);
+            }
+        } catch (e) {}
+    }
+
+    // Upload the level currently loaded/edited (pt.currMapDef). Requires a
+    // connected account (the browser is only reachable when ready).
+    function uploadCurrentLevel(body) {
+        var mapDef = global.pt && global.pt.currMapDef;
+        var status = document.getElementById("cw-count");
+        if (!mapDef) {
+            if (status) status.textContent = "No hay nivel para subir. Crea o juega un nivel en el Taller primero.";
+            return;
+        }
+        var title = (global.prompt ? global.prompt("Título del nivel:", "Mi nivel") : "Mi nivel");
+        if (title === null) return;
+        if (status) status.textContent = "Subiendo…";
+        rest.uploadLevel((title || "Mi nivel").slice(0, 64), mapDef).then(function () {
+            showLevelList(body);
+        }).catch(function (e) {
+            if (status) status.textContent = "Error al subir: " + e.message;
+        });
+    }
+
     // ------------------------------------------ Settings integration ----
     // Inject a "Cuenta / Servidor" button into the port's Settings panel
     // whenever it appears, so the profile/server can be managed from Ajustes too.
+    var delegationInstalled = false;
+    function installSettingsDelegation() {
+        if (delegationInstalled) return;
+        delegationInstalled = true;
+        // The settings panel intercepts clicks on its own buttons, so a normal
+        // listener on our injected button never fires. Catch it during the
+        // capture phase on document instead (fires before anything else).
+        document.addEventListener("click", function (e) {
+            var t = e.target;
+            while (t && t !== document) {
+                if (t.classList && t.classList.contains("cw-settings-btn")) {
+                    e.stopPropagation();
+                    open();
+                    return;
+                }
+                t = t.parentNode;
+            }
+        }, true);
+    }
+
     function injectSettingsButton(panel) {
         if (!panel || panel.querySelector(".cw-settings-entry")) return;
-        var wrap = document.createElement("div");
-        wrap.className = "cw-settings-entry";
-        wrap.style.cssText = "margin-top:14px;padding-top:12px;border-top:1px solid rgba(255,255,255,.25);text-align:center;";
+        installSettingsDelegation();
+        // Build a section that matches the port's own settings styling
+        // (.section / .section-title / .debug-action button).
+        var section = document.createElement("div");
+        section.className = "section cw-settings-entry";
+        var title = document.createElement("div");
+        title.className = "section-title";
+        title.textContent = "Comunidad";
         var btn = document.createElement("button");
+        btn.className = "debug-action cw-settings-btn";
         btn.textContent = "Cuenta / Servidor";
-        btn.style.cssText = "border:0;border-radius:999px;padding:9px 16px;font-weight:800;cursor:pointer;color:#1a1300;" +
-            "background:linear-gradient(180deg,#fff56f,#ffc629 60%,#ff8b21);box-shadow:0 3px 0 rgba(160,90,0,.6);";
-        btn.onclick = function () { open(); };
-        wrap.appendChild(btn);
-        panel.appendChild(wrap);
+        section.appendChild(title);
+        section.appendChild(btn);
+        // place it just before the version indicator if present, else append
+        var version = panel.querySelector(".version, [id*='version']");
+        if (version) panel.insertBefore(section, version); else panel.appendChild(section);
     }
 
     function watchSettings() {
@@ -307,6 +500,7 @@
         hasServer: hasServer,
         requireSetup: requireSetup,
         open: open,
+        openBrowser: openBrowser,
         getProfile: function () { return { id: state.id, name: state.name, avatar: state.avatar, server: state.server, serverName: state.serverName }; },
         pingServer: pingServer,
         rest: rest
