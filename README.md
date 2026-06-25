@@ -21,10 +21,6 @@ quickly even on slow connections.
 | `overlay/` | Port-only files that are **added** on top of the game. Most importantly `scripts/chromium/*` — the NWF shims, the GTX texture runtime, the multi‑channel audio engine, the asset preloader, save handling, etc. Also `tools/` (the offline GTX→PNG converter). |
 | `patches/` | Unified diffs (one per file) describing every change the port makes to the **original** game scripts (50 files). These are applied on top of your game files at build time. `patches/_index.txt` lists what each patch targets. |
 | `build.py` | The build script. Combines your game files + `overlay/` + `patches/` into a runnable port. |
-| `.gitignore` | Keeps the build output (which contains game assets) out of git. |
-
-Nothing in `overlay/` or `patches/` includes copyrighted game content: the
-overlay is original port code, and the patches contain only the changed lines.
 
 ---
 
