@@ -126,9 +126,37 @@
             bonusCurrent.level = 0;
         }
 
+        unlockStampsAndStars();
+
         pt.storage.saveAllProgress();
         applied = true;
         return true;
+    }
+
+    function unlockStampsAndStars() {
+        if (!global.pt || !pt.storage) return;
+
+        // Unlock every collectible stamp (the stamp gallery counter goes to N/N).
+        try {
+            if (pt.storage.getStampUnlockedStatus) {
+                var stamps = pt.storage.getStampUnlockedStatus();
+                var stampCount = (global.pt.stamp && pt.stamp.UNLOCKABLE_STAMP_COUNT) || 72;
+                if (stamps) {
+                    var limit = Math.min(stampCount, stamps.length);
+                    for (var s = 0; s < limit; ++s) {
+                        stamps[s] = true;
+                    }
+                }
+            }
+        } catch (err) {}
+
+        // Fill the star counter to the maximum value it can hold.
+        try {
+            if (pt.storage.setStarbucks) {
+                var maxStars = (typeof pt.storage.MAX_STARBUCKS === "number") ? pt.storage.MAX_STARBUCKS : 99999;
+                pt.storage.setStarbucks(maxStars);
+            }
+        } catch (err) {}
     }
 
     function installBonusLockGuard() {

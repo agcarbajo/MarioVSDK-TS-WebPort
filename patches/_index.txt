@@ -1,6 +1,8 @@
 audio__json__STREAMFILEINFO.json.patch  ->  audio/json/STREAMFILEINFO.json
 index.html.patch  ->  index.html
 json__layerdef.json.patch  ->  json/layerdef.json
+layoutData__title_GAMEPAD_flyt.json.patch  ->  layoutData/title_GAMEPAD_flyt.json
+layoutData__title_TV_flyt.json.patch  ->  layoutData/title_TV_flyt.json
 scripts__bootstrap.js.patch  ->  scripts/bootstrap.js
 scripts__lib__background__Background.js.patch  ->  scripts/lib/background/Background.js
 scripts__lib__curl__plugin__audio.js.patch  ->  scripts/lib/curl/plugin/audio.js

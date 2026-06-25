@@ -1,0 +1,31 @@
+diff --git a/layoutData/title_GAMEPAD_flyt.json b/layoutData/title_GAMEPAD_flyt.json
+index 5b1bcf4..9465bca 100644
+--- a/layoutData/title_GAMEPAD_flyt.json
++++ b/layoutData/title_GAMEPAD_flyt.json
+@@ -4138,22 +4138,22 @@
+ 						"_y": "1"
+ 					},
+ 					"size": {
+-						"_x": "277",
++						"_x": "740",
+ 						"_y": "20"
+ 					},
+ 					"textBox": {
+ 						"_font": "nintendo_NTLG-DB_002",
+ 						"_detailSetting": "true",
+ 						"fontSize": {
+-							"_x": "14",
+-							"_y": "18"
++							"_x": "12",
++							"_y": "15"
+ 						},
+ 						"fontSizeOriginal": {
+ 							"_x": "40",
+ 							"_y": "51"
+ 						},
+ 						"text": {
+-							"val": "© 2015 Nintendo"
++							"val": "© 2015 Nintendo - 2026 webport by agcarbajo"
+ 						},
+ 						"topColor": {
+ 							"_r": "0",

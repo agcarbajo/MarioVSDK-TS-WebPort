@@ -1,0 +1,31 @@
+diff --git a/layoutData/title_TV_flyt.json b/layoutData/title_TV_flyt.json
+index edc296e..23b0157 100644
+--- a/layoutData/title_TV_flyt.json
++++ b/layoutData/title_TV_flyt.json
+@@ -682,22 +682,22 @@
+ 						"_y": "1"
+ 					},
+ 					"size": {
+-						"_x": "256",
++						"_x": "760",
+ 						"_y": "32"
+ 					},
+ 					"textBox": {
+ 						"_font": "nintendo_NTLG-DB_002",
+ 						"_detailSetting": "true",
+ 						"fontSize": {
+-							"_x": "20",
+-							"_y": "25.5"
++							"_x": "14",
++							"_y": "17.85"
+ 						},
+ 						"fontSizeOriginal": {
+ 							"_x": "40",
+ 							"_y": "51"
+ 						},
+ 						"text": {
+-							"val": "© 2015 Nintendo"
++							"val": "© 2015 Nintendo - 2026 webport by agcarbajo"
+ 						},
+ 						"topColor": {
+ 							"_r": "0",
