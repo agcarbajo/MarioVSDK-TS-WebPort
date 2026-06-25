@@ -19,26 +19,13 @@ quickly even on slow connections.
 | Path | What it is |
 |------|------------|
 | `overlay/` | Port-only files that are **added** on top of the game. Most importantly `scripts/chromium/*` — the NWF shims, the GTX texture runtime, the multi‑channel audio engine, the asset preloader, save handling, etc. Also `tools/` (the offline GTX→PNG converter). |
-| `patches/` | Unified diffs (one per file) describing every change the port makes to the **original** game files (scripts and a couple of layouts). These are applied on top of your game files at build time. `patches/_index.txt` lists what each patch targets. |
+| `patches/` | Unified diffs (one per file) describing every change the port makes to the **original** game scripts (50 files). These are applied on top of your game files at build time. `patches/_index.txt` lists what each patch targets. |
 | `build.py` | The build script. Combines your game files + `overlay/` + `patches/` into a runnable port. |
 
 ---
 
-## What you need to supply
-
-Your own dump of **Mario vs. Donkey Kong: Tipping Stars (Wii U)**. The build
-accepts either:
-
-* the **dump root** (the folder that contains `content/app/...`), or
-* the **app folder** itself (the one that directly contains `scripts/` and `audio/`).
-
-This port targets the **EU** game files. A different region/version may cause
-some patches to fail to apply (the build will tell you which).
-
----
-
 ## Requirements
-
+* **Your own dump of Mario vs. Donkey Kong Tipping Stars** — the game must be in decrypted/loadiine format, build accepts either the **dump root** (the folder that contains `content/app/...`), or the **app folder** itself (the one that directly contains `scripts/` and `audio/`).
 * **Python 3.7+** — runs the build, applies the patches, and converts the
   textures (no third‑party Python packages required).
 * **ffmpeg** *(optional but recommended)* — extracts the per‑world
@@ -72,9 +59,9 @@ The build will:
 
 1. copy your game files into the output folder,
 2. overlay the port-only files (`scripts/chromium`, `tools`),
-3. apply the patches to the modified game scripts,
-4. convert the Wii U **GTX** textures to **PNG** (pure Python, ~338 bundles,
-   converted in parallel across your CPU cores),
+3. apply the 50 patches to the modified game scripts,
+4. convert the Wii U **GTX** textures to **PNG** (pure Python — ~338 texture
+   bundles, so this step takes a few minutes),
 5. extract the per‑world level‑select music with ffmpeg (if available).
 
 ---
@@ -94,9 +81,9 @@ Then open <http://127.0.0.1:8765/>.
 ### Controls
 
 * **Mouse / touch / stylus** — emulates the Wii U GamePad touch input.
-* **Arrow keys / WASD** — basic digital stick.
-* **Enter / Space / Z** — A button.
-* **X / Esc / Backspace** — B button.
+* **Arrow keys / WASD** — move the camera in bigger levels.
+* **Esc** — open the pause menu.
+* **Ctrl + Z** — undo on the level editor.
 
 ---
 
@@ -120,6 +107,7 @@ to the app root, matching the other patches).
 
 ## Notes & limitations
 
+* Only tested with the EU version of the game, not sure how it will work with other regions.
 * Online features (Miiverse, the community level sharing, etc.) are stubbed or
   disabled — this port targets **offline** play (story/solo, bonus, the level
   editor, local save).
