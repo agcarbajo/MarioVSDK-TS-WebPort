@@ -1,3 +1,19 @@
+/*
+ * Mario vs Donkey Kong: Tipping Stars - Chromium port multichannel audio.
+ *
+ * The level-select music is a single 14-channel (7 stereo pairs, one per world)
+ * track. The original Wii U asset is `level_select_full.ogg`, but a 14-channel
+ * Vorbis file has an undefined channel layout and Chromium's decodeAudioData
+ * rejects it once you go past ~10 channels (this is why it failed in Electron's
+ * bundled Chromium, while system Edge happened to accept it).
+ *
+ * So instead of decoding one 14-channel file, this shim loads the seven stereo
+ * per-world files (`level_select_world_1.ogg` .. `level_select_world_7.ogg`,
+ * produced at build time) and plays them in sync, one per world. The smooth
+ * cross-fade between worlds is reproduced by ramping each world's gain from the
+ * game's per-channel volumes (channelVolume[2*i] / [2*i+1] drive world i+1).
+ * Stereo Vorbis decodes everywhere, so this works in Electron and in browsers.
+ */
 (function (global) {
     'use strict';
 
@@ -10,15 +26,15 @@
 
     global.__chromiumPortMultiChannelAudioInstalled = true;
 
+    var NUM_WORLDS = 7;          // 7 stereo per-world tracks = 14 logical channels
+    var START_LEAD = 0.06;       // schedule all sources to begin together
+
     function isLevelSelectAudio(src) {
         return typeof src === 'string' && src.toLowerCase().indexOf('level_select_full.ogg') !== -1;
     }
 
-    function levelSelectWorld6FallbackSrc(src) {
-        if (!isLevelSelectAudio(src)) {
-            return '';
-        }
-        return String(src).replace(/level_select_full\.ogg/i, 'level_select_world_6.ogg');
+    function worldTrackSrc(src, world) {
+        return String(src).replace(/level_select_full\.ogg/i, 'level_select_world_' + world + '.ogg');
     }
 
     function getAudioContext() {
@@ -51,16 +67,11 @@
         this.currentSrc = this.src;
 
         this._ctx = null;
-        this._buffer = null;
-        this._source = null;
-        this._splitter = null;
-        this._merger = null;
+        this._buffers = null;        // Array(NUM_WORLDS) of AudioBuffer | null
+        this._duration = 0;
+        this._sources = [];
+        this._gains = [];
         this._masterGain = null;
-        this._world6FallbackBuffer = null;
-        this._world6FallbackSource = null;
-        this._world6FallbackGain = null;
-        this._world6FallbackLoadingPromise = null;
-        this._channelGains = [];
         this._listeners = {};
         this._loadingPromise = null;
         this._queuedPlay = false;
@@ -77,50 +88,40 @@
     }
 
     Object.defineProperty(MultiChannelAudio.prototype, 'paused', {
-        get: function () {
-            return !this._playing;
-        }
+        get: function () { return !this._playing; }
     });
 
     Object.defineProperty(MultiChannelAudio.prototype, 'ended', {
-        get: function () {
-            return this._ended;
-        }
+        get: function () { return this._ended; }
     });
 
     Object.defineProperty(MultiChannelAudio.prototype, 'duration', {
-        get: function () {
-            return this._buffer ? this._buffer.duration : NaN;
-        }
+        get: function () { return this._duration > 0 ? this._duration : NaN; }
     });
 
     Object.defineProperty(MultiChannelAudio.prototype, 'readyState', {
-        get: function () {
-            return this._buffer ? 4 : 0;
-        }
+        get: function () { return this._buffers ? 4 : 0; }
     });
 
     Object.defineProperty(MultiChannelAudio.prototype, 'currentTime', {
         get: function () {
-            if (!this._buffer) {
+            if (!this._buffers || !this._playing || !this._ctx) {
                 return this._pauseTime || 0;
             }
-            if (!this._playing || !this._ctx) {
-                return this._pauseTime || 0;
-            }
-
             var elapsed = this._ctx.currentTime - this._startTime;
-            if (this.loop && this._buffer.duration > 0) {
-                return elapsed % this._buffer.duration;
+            if (elapsed < 0) {
+                elapsed = 0;
             }
-            return Math.min(elapsed, this._buffer.duration);
+            if (this.loop && this._duration > 0) {
+                return elapsed % this._duration;
+            }
+            return this._duration > 0 ? Math.min(elapsed, this._duration) : elapsed;
         },
         set: function (value) {
             var wasPlaying = this._playing;
-            var duration = this._buffer ? this._buffer.duration : 0;
             value = Math.max(0, Number(value) || 0);
-            if (duration > 0) {
-                value = this.loop ? value % duration : Math.min(value, duration);
+            if (this._duration > 0) {
+                value = this.loop ? value % this._duration : Math.min(value, this._duration);
             }
             this._pauseTime = value;
             if (wasPlaying) {
@@ -167,7 +168,6 @@
                 setTimeout(function () { throw err; }, 0);
             }
         }
-
         if (typeof handler === 'function') {
             handler.call(this, event);
         }
@@ -177,11 +177,14 @@
         var self = this;
         var requestSrc = this.src;
         var loadToken;
+        var ctx;
+        var world;
+        var tasks;
 
         if (!requestSrc) {
             return;
         }
-        if (this._buffer && this.currentSrc === requestSrc) {
+        if (this._buffers && this.currentSrc === requestSrc) {
             this._dispatch('canplaythrough');
             if (this._queuedPlay || this.autoplay) {
                 this.play();
@@ -198,176 +201,95 @@
         this._stopped = false;
         this._pauseTime = 0;
 
-        this._loadingPromise = fetch(requestSrc)
-            .then(function (response) {
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status + ' while loading ' + requestSrc);
+        ctx = getAudioContext();
+        this._ctx = ctx;
+
+        tasks = [];
+        for (world = 1; world <= NUM_WORLDS; ++world) {
+            tasks.push((function (trackSrc) {
+                return fetch(trackSrc)
+                    .then(function (response) {
+                        if (!response.ok) {
+                            throw new Error('HTTP ' + response.status + ' while loading ' + trackSrc);
+                        }
+                        return response.arrayBuffer();
+                    })
+                    .then(function (arrayBuffer) {
+                        return ctx.decodeAudioData(arrayBuffer.slice(0));
+                    })
+                    .catch(function (err) {
+                        console.warn('[chromium-port] No se pudo cargar pista de mundo:', err);
+                        return null;
+                    });
+            })(worldTrackSrc(requestSrc, world)));
+        }
+
+        this._loadingPromise = Promise.all(tasks).then(function (buffers) {
+            if (loadToken !== self._loadToken || self._stopped || self.src !== requestSrc) {
+                return;
+            }
+            self._loadingPromise = null;
+
+            var loaded = 0;
+            var maxDuration = 0;
+            for (var i = 0; i < buffers.length; ++i) {
+                if (buffers[i]) {
+                    loaded++;
+                    if (buffers[i].duration > maxDuration) {
+                        maxDuration = buffers[i].duration;
+                    }
                 }
-                return response.arrayBuffer();
-            })
-            .then(function (arrayBuffer) {
-                var ctx = getAudioContext();
-                self._ctx = ctx;
-                return ctx.decodeAudioData(arrayBuffer.slice(0));
-            })
-            .then(function (buffer) {
-                if (loadToken !== self._loadToken || self._stopped || self.src !== requestSrc) {
-                    return;
-                }
-                self._buffer = buffer;
-                self._loadingPromise = null;
-                self._loadWorld6Fallback();
-                self._dispatch('canplaythrough');
-                if (self._queuedPlay || self.autoplay) {
-                    self.play();
-                }
-            })
-            .catch(function (err) {
-                if (loadToken !== self._loadToken || self._stopped || self.src !== requestSrc) {
-                    return;
-                }
-                self._loadingPromise = null;
-                console.error('[chromium-port] No se pudo cargar audio multicanal:', err);
+            }
+
+            if (!loaded) {
+                console.error('[chromium-port] No se pudo cargar audio multicanal: ninguna pista de mundo se pudo decodificar.');
                 self._dispatch('error');
-            });
+                return;
+            }
+
+            self._buffers = buffers;
+            self._duration = maxDuration;
+            self._dispatch('canplaythrough');
+            if (self._queuedPlay || self.autoplay) {
+                self.play();
+            }
+        });
     };
 
-    MultiChannelAudio.prototype._disconnectSource = function () {
-        if (this._source) {
-            try {
-                this._source.onended = null;
-                this._source.stop(0);
-            } catch (err) {
+    MultiChannelAudio.prototype._disconnectSources = function () {
+        var i;
+        for (i = 0; i < this._sources.length; ++i) {
+            if (this._sources[i]) {
+                try {
+                    this._sources[i].onended = null;
+                    this._sources[i].stop(0);
+                } catch (err) {
+                }
             }
         }
-
-        this._channelGains = [];
-        this._source = null;
-        this._splitter = null;
-        this._merger = null;
-        this._disconnectWorld6Fallback();
+        this._sources = [];
+        this._gains = [];
         this._masterGain = null;
-    };
-
-    MultiChannelAudio.prototype._loadWorld6Fallback = function () {
-        var self = this;
-        var fallbackSrc = levelSelectWorld6FallbackSrc(this.src);
-
-        if (!fallbackSrc || this._world6FallbackBuffer || this._world6FallbackLoadingPromise) {
-            return;
-        }
-
-        this._world6FallbackLoadingPromise = fetch(fallbackSrc)
-            .then(function (response) {
-                if (!response.ok) {
-                    throw new Error('HTTP ' + response.status + ' while loading ' + fallbackSrc);
-                }
-                return response.arrayBuffer();
-            })
-            .then(function (arrayBuffer) {
-                var ctx = self._ctx || getAudioContext();
-                self._ctx = ctx;
-                return ctx.decodeAudioData(arrayBuffer.slice(0));
-            })
-            .then(function (buffer) {
-                self._world6FallbackBuffer = buffer;
-                self._world6FallbackLoadingPromise = null;
-                if (self._playing && self._wantsWorld6Fallback()) {
-                    self._connectWorld6Fallback(self.currentTime);
-                    self._updateVolumes(true);
-                }
-            })
-            .catch(function (err) {
-                self._world6FallbackLoadingPromise = null;
-                console.warn('[chromium-port] No se pudo cargar fallback de musica mundo 6:', err);
-            });
-    };
-
-    MultiChannelAudio.prototype._wantsWorld6Fallback = function () {
-        return Math.max(clamp01(this.channelVolume[10]), clamp01(this.channelVolume[11])) > 0.001;
-    };
-
-    MultiChannelAudio.prototype.forceWorld6Fallback = function () {
-        if (!isLevelSelectAudio(this.src)) {
-            return;
-        }
-
-        if (!this._world6FallbackBuffer) {
-            this._loadWorld6Fallback();
-        }
-
-        if (this._playing && this._world6FallbackBuffer && !this._world6FallbackSource) {
-            this._connectWorld6Fallback(this.currentTime);
-        }
-
-        this._updateVolumes(true);
-    };
-
-    MultiChannelAudio.prototype._disconnectWorld6Fallback = function () {
-        if (this._world6FallbackSource) {
-            try {
-                this._world6FallbackSource.onended = null;
-                this._world6FallbackSource.stop(0);
-            } catch (err) {
-            }
-        }
-        this._world6FallbackSource = null;
-        this._world6FallbackGain = null;
-    };
-
-    MultiChannelAudio.prototype._connectWorld6Fallback = function (offset) {
-        var ctx;
-        var source;
-        var gain;
-
-        if (!this._world6FallbackBuffer || !this._playing) {
-            return;
-        }
-
-        ctx = this._ctx || getAudioContext();
-        this._disconnectWorld6Fallback();
-
-        source = ctx.createBufferSource();
-        gain = ctx.createGain();
-        source.buffer = this._world6FallbackBuffer;
-        source.loop = !!this.loop;
-        source.connect(gain);
-        gain.connect(ctx.destination);
-
-        this._world6FallbackSource = source;
-        this._world6FallbackGain = gain;
-
-        offset = Math.max(0, Number(offset) || 0);
-        if (this._world6FallbackBuffer.duration > 0) {
-            offset = this.loop ? offset % this._world6FallbackBuffer.duration : Math.min(offset, this._world6FallbackBuffer.duration);
-        }
-
-        try {
-            source.start(0, offset);
-        } catch (err) {
-            this._disconnectWorld6Fallback();
-        }
     };
 
     MultiChannelAudio.prototype.play = function () {
         var self = this;
         var ctx;
-        var source;
-        var splitter;
-        var merger;
-        var masterGain;
-        var channelCount;
-        var channelIndex;
-        var gain;
         var offset;
+        var when;
+        var i;
+        var buffer;
+        var source;
+        var gain;
+        var longest = -1;
+        var longestDur = -1;
 
-        if (!this._buffer) {
+        if (!this._buffers) {
             this._queuedPlay = true;
             this._stopped = false;
             this.load();
             return Promise.resolve();
         }
-
         if (this._playing) {
             return Promise.resolve();
         }
@@ -378,60 +300,70 @@
             ctx.resume().catch(function () {});
         }
 
-        this._disconnectSource();
+        this._disconnectSources();
 
-        source = ctx.createBufferSource();
-        splitter = ctx.createChannelSplitter(this._buffer.numberOfChannels);
-        merger = ctx.createChannelMerger(2);
-        masterGain = ctx.createGain();
-        channelCount = this._buffer.numberOfChannels;
+        this._masterGain = ctx.createGain();
+        this._masterGain.gain.value = 1.0;
+        this._masterGain.connect(ctx.destination);
 
-        source.buffer = this._buffer;
-        source.loop = !!this.loop;
-
-        source.connect(splitter);
-        for (channelIndex = 0; channelIndex < channelCount; ++channelIndex) {
-            gain = ctx.createGain();
-            splitter.connect(gain, channelIndex);
-            gain.connect(merger, 0, channelIndex % 2);
-            this._channelGains[channelIndex] = gain;
+        offset = this._pauseTime || 0;
+        if (this._duration > 0) {
+            offset = this.loop ? offset % this._duration : Math.min(offset, this._duration);
         }
-        merger.connect(masterGain);
-        masterGain.connect(ctx.destination);
+        when = ctx.currentTime + START_LEAD;
+        this._startTime = when - offset;
 
-        this._source = source;
-        this._splitter = splitter;
-        this._merger = merger;
-        this._masterGain = masterGain;
+        this._sources = new Array(NUM_WORLDS);
+        this._gains = new Array(NUM_WORLDS);
+
+        for (i = 0; i < NUM_WORLDS; ++i) {
+            buffer = this._buffers[i];
+            if (!buffer) {
+                this._sources[i] = null;
+                this._gains[i] = null;
+                continue;
+            }
+            source = ctx.createBufferSource();
+            gain = ctx.createGain();
+            source.buffer = buffer;
+            source.loop = !!this.loop;
+            source.connect(gain);
+            gain.connect(this._masterGain);
+
+            var startOffset = offset;
+            if (buffer.duration > 0) {
+                startOffset = this.loop ? offset % buffer.duration : Math.min(offset, buffer.duration);
+            }
+            try {
+                source.start(when, startOffset);
+            } catch (err) {
+                try { source.start(0, startOffset); } catch (err2) {}
+            }
+
+            this._sources[i] = source;
+            this._gains[i] = gain;
+
+            if (buffer.duration > longestDur) {
+                longestDur = buffer.duration;
+                longest = i;
+            }
+        }
+
         this._playing = true;
         this._ended = false;
         this._queuedPlay = false;
         this._stopped = false;
-
-        offset = this._pauseTime || 0;
-        if (this._buffer.duration > 0) {
-            offset = this.loop ? offset % this._buffer.duration : Math.min(offset, this._buffer.duration);
-        }
-        this._startTime = ctx.currentTime - offset;
-        this._updateVolumes(true);
-        this._loadWorld6Fallback();
-        this._connectWorld6Fallback(offset);
         this._updateVolumes(true);
 
-        source.onended = function () {
-            if (self._playing && !self.loop) {
-                self._playing = false;
-                self._pauseTime = 0;
-                self._ended = true;
-                self._dispatch('ended');
-            }
-        };
-
-        try {
-            source.start(0, offset);
-        } catch (err) {
-            this._playing = false;
-            return Promise.reject(err);
+        if (longest >= 0 && this._sources[longest]) {
+            this._sources[longest].onended = function () {
+                if (self._playing && !self.loop) {
+                    self._playing = false;
+                    self._pauseTime = 0;
+                    self._ended = true;
+                    self._dispatch('ended');
+                }
+            };
         }
 
         return Promise.resolve();
@@ -444,7 +376,7 @@
         }
         this._pauseTime = this.currentTime;
         this._playing = false;
-        this._disconnectSource();
+        this._disconnectSources();
     };
 
     MultiChannelAudio.prototype.stop = function () {
@@ -455,35 +387,27 @@
         this._pauseTime = 0;
         this._ended = false;
         this._loadingPromise = null;
-        this._disconnectSource();
+        this._disconnectSources();
     };
 
     MultiChannelAudio.prototype._updateVolumes = function (instant) {
         var ctx = this._ctx;
-        var channelIndex;
+        var volume = clamp01(this.volume);
+        var i;
         var gain;
         var target;
-        var volume = clamp01(this.volume);
-        var wantsWorld6 = this._wantsWorld6Fallback();
 
-        if (!ctx || !this._channelGains.length) {
+        if (!ctx || !this._gains || !this._gains.length) {
             return;
         }
 
-        if (isLevelSelectAudio(this.src) && wantsWorld6) {
-            if (!this._world6FallbackBuffer) {
-                this._loadWorld6Fallback();
-            } else if (this._playing && !this._world6FallbackSource) {
-                this._connectWorld6Fallback(this.currentTime);
+        for (i = 0; i < this._gains.length; ++i) {
+            gain = this._gains[i];
+            if (!gain) {
+                continue;
             }
-        }
-
-        for (channelIndex = 0; channelIndex < this._channelGains.length; ++channelIndex) {
-            gain = this._channelGains[channelIndex];
-            target = volume * clamp01(this.channelVolume[channelIndex]);
-            if (isLevelSelectAudio(this.src) && (channelIndex === 10 || channelIndex === 11)) {
-                target = 0;
-            }
+            // world i+1 is driven by channel pair (2*i, 2*i+1)
+            target = volume * Math.max(clamp01(this.channelVolume[2 * i]), clamp01(this.channelVolume[2 * i + 1]));
             if (instant || !gain.gain.setTargetAtTime) {
                 gain.gain.value = target;
             } else {
@@ -494,28 +418,25 @@
         if (this._masterGain) {
             this._masterGain.gain.value = 1.0;
         }
-        if (this._world6FallbackGain) {
-            target = volume * Math.max(clamp01(this.channelVolume[10]), clamp01(this.channelVolume[11]));
-            if (instant || !this._world6FallbackGain.gain.setTargetAtTime) {
-                this._world6FallbackGain.gain.value = target;
-            } else {
-                this._world6FallbackGain.gain.setTargetAtTime(target, ctx.currentTime, 0.025);
-            }
-        }
     };
+
+    // Kept as a no-op for backwards compatibility with the SoundPlayer race-fix
+    // patch, which calls forceWorld6Fallback() for the world-6 select BGM. World
+    // 6 is now just another per-world track, so nothing special is needed.
+    MultiChannelAudio.prototype.forceWorld6Fallback = function () {};
 
     MultiChannelAudio.prototype.setAttribute = function (name, value) {
         if (name === 'src') {
             if (!value) {
                 this.src = '';
                 this.currentSrc = '';
-                this._buffer = null;
+                this._buffers = null;
                 this.stop();
                 return;
             }
             if (value !== this.src) {
                 this.stop();
-                this._buffer = null;
+                this._buffers = null;
                 this.src = value;
                 this.currentSrc = value;
                 return;
@@ -528,7 +449,7 @@
         if (name === 'src') {
             this.src = '';
             this.currentSrc = '';
-            this._buffer = null;
+            this._buffers = null;
             this.stop();
             return;
         }
@@ -675,6 +596,8 @@
     PatchedAudio.prototype = NativeAudio.prototype;
     global.Audio = PatchedAudio;
 
+    // Drive the per-world cross-fade: each tick re-applies the game's current
+    // channel volumes (which SoundPlayer ramps every frame) to the gain nodes.
     global.setInterval(function () {
         var active = global.__chromiumPortActiveMultiChannelAudios;
         var index;
@@ -684,4 +607,4 @@
             }
         }
     }, 33);
-})(window);
+}(window));

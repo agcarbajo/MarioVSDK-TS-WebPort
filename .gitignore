@@ -4,6 +4,12 @@
 # Packaged desktop app output (executable + bundled game assets)
 /dist/
 
+# Electron build dependencies (downloaded by npm install)
+/electron/node_modules/
+
+# Generated app icon (derived from the user's game files at build time)
+/electron/game-icon.ico
+
 # Python
 __pycache__/
 *.pyc

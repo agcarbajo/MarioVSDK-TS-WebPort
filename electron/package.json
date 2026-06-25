@@ -1,0 +1,16 @@
+{
+  "name": "mvdk-tipping-stars",
+  "productName": "MvDK-Tipping-Stars",
+  "version": "0.9.5",
+  "description": "Mario vs. Donkey Kong: Tipping Stars — standalone desktop app",
+  "main": "main.js",
+  "private": true,
+  "license": "UNLICENSED",
+  "scripts": {
+    "start": "electron ."
+  },
+  "devDependencies": {
+    "@electron/packager": "^18.3.0",
+    "electron": "^33.0.0"
+  }
+}

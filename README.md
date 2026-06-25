@@ -67,9 +67,32 @@ The build will:
 1. copy your game files into the output folder,
 2. overlay the port-only files (`scripts/chromium`, `tools`),
 3. apply the patches to the modified game files,
-4. convert the Wii U **GTX** textures to **PNG** (pure Python — ~338 texture
-   bundles, so this step takes a few minutes),
-5. extract the per‑world level‑select music with ffmpeg (if available).
+4. convert the Wii U **GTX** textures to **PNG** (pure Python, ~338 bundles,
+   converted in parallel; a few minutes),
+5. extract the per‑world level‑select music and the game icon with ffmpeg
+   (if available).
+
+### Optional: standalone desktop app
+
+Add `--package` to also bundle the built game **and** a host into a
+double-click desktop app for your current OS. The output lands under `dist/` as
+an executable plus a folder of files (keep them together; `--app-name NAME`
+renames it). It uses the real game icon.
+
+```bash
+python build.py --src "/path/to/your/game/files" --package
+```
+
+* **`--package`** (default, **Electron**) — fully self-contained: bundles its
+  own Chromium, so it depends on nothing pre-installed. Needs **Node.js + npm**
+  (the first run downloads Electron).
+* **`--package webview`** — lightweight: reuses the OS's browser engine instead
+  of bundling Chromium. Needs **PyInstaller** (`pip install pyinstaller`);
+  **pywebview** is optional (`pip install pywebview`) for a native window,
+  otherwise it opens your default browser.
+
+The app is built only for the OS you run the command on (neither Electron nor
+PyInstaller cross-compiles).
 
 ---
 
@@ -91,47 +114,6 @@ Then open <http://127.0.0.1:8765/>.
 * **Arrow keys / WASD** — move the camera in bigger levels.
 * **Esc** — open the pause menu.
 * **Ctrl + Z** — undo on the level editor.
-
----
-
-## Standalone desktop app
-
-You can also package everything — the game **and** a local host — into a single
-desktop app for your current operating system, so it launches by double-clicking
-instead of starting a web server by hand:
-
-```bash
-python build.py --src "/path/to/your/game/files" --package
-```
-
-This produces, under `dist/`, **an executable plus a folder of files** built for
-the OS you run it on, e.g. on Windows:
-
-```
-dist/MvDK-Tipping-Stars/
-├── MvDK-Tipping-Stars.exe   <- launch this
-├── _internal/               <- runtime files
-└── web/                     <- the built game
-```
-
-Keep the folder's contents together and run the executable to play. Use
-`--app-name NAME` to change the name.
-
-The app starts a private localhost web server and shows the game in a window:
-
-* with **[pywebview](https://pywebview.flowlib.org/)** installed it opens a
-  **native window** rendered by your system's built-in Chromium/WebKit webview
-  (on Windows, the Edge **WebView2** runtime);
-* without it, the app falls back to opening the game in your **default browser**.
-
-Extra requirements for `--package`:
-
-* **PyInstaller** — `pip install pyinstaller` (does the packaging).
-* **pywebview** *(optional)* — `pip install pywebview` for the native window;
-  otherwise the browser fallback is used.
-
-> The app is built for the OS you run the command on — PyInstaller does not
-> cross-compile, so build the Windows app on Windows, the macOS app on macOS, etc.
 
 ---
 

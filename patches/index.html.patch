@@ -1,8 +1,15 @@
 diff --git a/index.html b/index.html
-index 0c5b9f9..d357a35 100644
+index 0c5b9f9..28e5ff0 100644
 --- a/index.html
 +++ b/index.html
-@@ -8,12 +8,35 @@
+@@ -3,17 +3,42 @@
+ 	<head>
+ 		<meta charset="utf-8">
+ 		<title>Playtime</title>
++		<link rel="icon" type="image/png" href="game-icon.png">
++		<link rel="shortcut icon" type="image/png" href="game-icon.png">
+ 		<style type="text/css">
+ 			* {
  				margin: 0;
  				padding: 0;
  				-webkit-user-select: none;
@@ -38,7 +45,7 @@ index 0c5b9f9..d357a35 100644
  			}
  		</style>
  		<!-- this style tag is removed after the LoadingScreen class takes over -->
-@@ -25,13 +48,134 @@
+@@ -25,13 +50,134 @@
  				left: 0;
  			}
  			#gp-container {
@@ -176,7 +183,7 @@ index 0c5b9f9..d357a35 100644
  			}
  			.ann-box-gp {
  				display: -webkit-box;
-@@ -117,6 +261,49 @@
+@@ -117,6 +263,49 @@
  			}*/
  		</style>
  
@@ -226,7 +233,7 @@ index 0c5b9f9..d357a35 100644
  		<script type="text/javascript">
  		(function(){
  			// Set-up the viewport as quick as possible!
-@@ -182,6 +369,27 @@
+@@ -182,6 +371,27 @@
  				for (i = 0; i < els.length; i++) {
  					els[i].innerHTML = str;
  				}
@@ -254,7 +261,7 @@ index 0c5b9f9..d357a35 100644
  			}, false);
  			
  		})();
-@@ -193,21 +401,27 @@
+@@ -193,21 +403,27 @@
  	</head>
  	<body>
  		

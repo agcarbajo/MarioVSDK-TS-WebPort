@@ -26,6 +26,7 @@ import argparse
 import os
 import re
 import shutil
+import struct
 import subprocess
 import sys
 import time
@@ -41,6 +42,10 @@ DIST_DIR = REPO / "dist"
 # level_select_full.ogg. Confirmed against the game's channel flags.
 LEVEL_SELECT_FULL = "audio/sounds/level_select_full.ogg"
 WORLD_TRACK_COUNT = 7
+
+# The real Wii U game icon (used for the web favicon and the desktop app icon).
+GAME_ICON_SRC = "meta/iconTex.tga"
+WEB_ICON_NAME = "game-icon.png"
 
 
 def info(msg):  print("[build] " + msg)
@@ -293,6 +298,47 @@ def extract_world_music(out: Path, ffmpeg: str, prog: Progress):
     return None
 
 
+def _find_game_icon(src: Path):
+    """Locate the Wii U game icon (meta/iconTex.tga) in the supplied dump."""
+    for c in [src / GAME_ICON_SRC, src / "content" / ".." / GAME_ICON_SRC]:
+        if c.exists():
+            return c
+    found = list(src.rglob("iconTex.tga"))
+    return found[0] if found else None
+
+
+def prepare_web_icon(src: Path, out: Path, ffmpeg: str):
+    """Convert the game's icon to a PNG in the web root (used as the favicon and
+    as the desktop app's window icon). Returns the PNG path or None."""
+    icon = _find_game_icon(src)
+    if not icon:
+        warn("game icon (%s) not found in the supplied files; using default icon." % GAME_ICON_SRC)
+        return None
+    if not ffmpeg:
+        warn("ffmpeg not found; skipping game icon (favicon/app icon).")
+        return None
+    dst = out / WEB_ICON_NAME
+    res = subprocess.run([ffmpeg, "-y", "-loglevel", "error", "-i", str(icon), str(dst)],
+                         stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    if res.returncode != 0 or not dst.exists():
+        warn("could not convert the game icon: %s" % res.stderr.decode("utf-8", "replace").strip())
+        return None
+    info("Game icon -> %s" % dst)
+    return dst
+
+
+def _png_to_ico(png_path: Path, ico_path: Path):
+    """Wrap a PNG into a single-image .ico (PNG-compressed icon, Vista+)."""
+    png = png_path.read_bytes()
+    width = int.from_bytes(png[16:20], "big")
+    height = int.from_bytes(png[20:24], "big")
+    bw = 0 if width >= 256 else width
+    bh = 0 if height >= 256 else height
+    header = struct.pack("<HHH", 0, 1, 1)
+    entry = struct.pack("<BBBBHHII", bw, bh, 0, 0, 1, 32, len(png), 22)
+    ico_path.write_bytes(header + entry + png)
+
+
 def _has_module(python: str, module: str) -> bool:
     return subprocess.run([python, "-c", "import %s" % module],
                           stdout=subprocess.DEVNULL,
@@ -362,16 +408,90 @@ def package_app(out: Path, app_name: str, python: str):
     info("  folder:     %s" % report_dir)
 
 
+def _run_node_tool(parts, cwd):
+    """Run an npm/npx command. On Windows these are .cmd shims that need the
+    shell, so build a properly quoted command line; elsewhere run the list."""
+    if os.name == "nt":
+        return subprocess.run(subprocess.list2cmdline(parts), cwd=str(cwd), shell=True)
+    return subprocess.run(parts, cwd=str(cwd))
+
+
+def package_electron(out: Path, app_name: str):
+    """Build a fully self-contained Electron app (bundles its own Chromium)."""
+    electron_dir = REPO / "electron"
+    if not (electron_dir / "main.js").exists():
+        fail("electron/main.js is missing; cannot build the Electron app.")
+    if not (shutil.which("npm") or shutil.which("npm.cmd")):
+        fail("Node.js + npm are required for the Electron app.\n"
+             "        Install Node.js from https://nodejs.org/ and re-run.")
+
+    out_root = DIST_DIR / "electron"
+    info("Building self-contained Electron app '%s' for %s ..." % (app_name, sys.platform))
+
+    info("Installing Electron build dependencies (first run downloads Electron; "
+         "this can take a while) ...")
+    if _run_node_tool(["npm", "install"], electron_dir).returncode != 0:
+        fail("`npm install` failed in the electron/ folder.")
+
+    info("Packaging with @electron/packager (this can take a few minutes) ...")
+    pkg_cmd = ["npx", "@electron/packager", ".", app_name,
+               "--out", str(out_root), "--overwrite", "--asar"]
+
+    # Use the real game icon for the executable when we have it (Windows .ico).
+    web_icon = out / WEB_ICON_NAME
+    if web_icon.exists() and sys.platform.startswith("win"):
+        ico = electron_dir / "game-icon.ico"
+        try:
+            _png_to_ico(web_icon, ico)
+            pkg_cmd += ["--icon", str(ico)]
+        except Exception as ex:  # noqa: BLE001
+            warn("could not build .ico for the executable: %s" % ex)
+
+    if _run_node_tool(pkg_cmd, electron_dir).returncode != 0:
+        fail("@electron/packager failed.")
+
+    matches = sorted(p for p in out_root.glob(app_name + "-*") if p.is_dir())
+    if not matches:
+        fail("Could not find the packaged Electron app under %s" % out_root)
+    app_dir = matches[-1]
+
+    # Work out where the app's resources live and where the launcher is.
+    if sys.platform == "darwin":
+        bundles = list(app_dir.glob("*.app"))
+        base = bundles[0] if bundles else app_dir
+        web_dst = base / "Contents" / "Resources" / "web"
+        exe = (base / "Contents" / "MacOS" / app_name) if bundles else base / app_name
+        report_dir = base
+    else:
+        web_dst = app_dir / "resources" / "web"
+        exe = app_dir / (app_name + ".exe") if sys.platform.startswith("win") else app_dir / app_name
+        report_dir = app_dir
+
+    if web_dst.exists():
+        shutil.rmtree(web_dst)
+    web_dst.parent.mkdir(parents=True, exist_ok=True)
+    info("Copying the built game into the app: %s" % web_dst)
+    shutil.copytree(out, web_dst)
+
+    info("")
+    info("Self-contained desktop app ready:")
+    info("  executable: %s" % exe)
+    info("  folder:     %s" % report_dir)
+
+
 def main():
     ap = argparse.ArgumentParser(description="Build the MvDK: Tipping Stars browser port.")
     ap.add_argument("--src", required=True,
                     help="Path to your original game files (dump root or app folder).")
     ap.add_argument("--out", default=str(REPO / "build" / "chromium-port"),
                     help="Output folder for the built port (default: build/chromium-port).")
-    ap.add_argument("--package", action="store_true",
+    ap.add_argument("--package", nargs="?", const="electron",
+                    choices=["electron", "webview"], default=None,
                     help="After building, also package a standalone desktop app "
-                         "(an executable + a folder of files) for the current OS, "
-                         "bundling a local host for the game.")
+                         "(an executable + a folder of files) for the current OS. "
+                         "'electron' (default) bundles its own Chromium for a fully "
+                         "self-contained app; 'webview' makes a lighter app that uses "
+                         "the OS webview / browser.")
     ap.add_argument("--app-name", default="MvDK-Tipping-Stars",
                     help="Name for the packaged app/executable (default: MvDK-Tipping-Stars).")
     args = ap.parse_args()
@@ -410,10 +530,17 @@ def main():
     if music_err:
         warn(music_err)
 
+    prepare_web_icon(src, out, ffmpeg)
+
     info("")
     info("Build complete in %s: %s" % (_fmt_eta(time.time() - prog.start), out))
 
-    if args.package:
+    if args.package == "electron":
+        info("")
+        package_electron(out, args.app_name)
+        info("")
+        info("Run the app by launching the executable above.")
+    elif args.package == "webview":
         info("")
         package_app(out, args.app_name, python)
         info("")
@@ -422,7 +549,7 @@ def main():
         info("Serve it over HTTP (NOT file://), for example:")
         info('    python -m http.server 8765 --bind 127.0.0.1 --directory "%s"' % out)
         info("Then open http://127.0.0.1:8765/")
-        info("Or run `python build.py ... --package` to build a standalone desktop app.")
+        info("Or run `python build.py ... --package` for a self-contained desktop app.")
 
 
 if __name__ == "__main__":
