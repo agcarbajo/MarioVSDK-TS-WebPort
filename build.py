@@ -470,13 +470,16 @@ def package_electron(out: Path, app_name: str):
     if web_dst.exists():
         shutil.rmtree(web_dst)
     web_dst.parent.mkdir(parents=True, exist_ok=True)
-    info("Copying the built game into the app: %s" % web_dst)
-    shutil.copytree(out, web_dst)
+    # Move (not copy) the built port into the app, so the only copy that remains
+    # is the one inside the Electron app — no separate build/chromium-port.
+    info("Moving the built game into the app: %s" % web_dst)
+    shutil.move(str(out), str(web_dst))
 
     info("")
     info("Self-contained desktop app ready:")
     info("  executable: %s" % exe)
     info("  folder:     %s" % report_dir)
+    info("  (the standalone build/chromium-port was moved into the app)")
 
 
 def main():

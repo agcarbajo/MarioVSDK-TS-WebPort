@@ -12,6 +12,12 @@ const path = require("path");
 
 const APP_TITLE = "Mario vs. Donkey Kong: Tipping Stars";
 
+// The game stores its save in IndexedDB, which is keyed by page origin
+// (http://127.0.0.1:<port>). We therefore serve on a FIXED port so the origin
+// is stable across launches and the save persists. A single-instance lock keeps
+// a second launch from grabbing a different port (which would orphan the save).
+const FIXED_PORT = 47821;
+
 const MIME = {
   ".html": "text/html; charset=utf-8",
   ".htm": "text/html; charset=utf-8",
@@ -51,8 +57,8 @@ function findWebRoot() {
   return null;
 }
 
-function startServer(root) {
-  return new Promise((resolve, reject) => {
+function startServer(root, port) {
+  return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
       let urlPath = decodeURIComponent((req.url || "/").split("?")[0]);
       if (urlPath === "/" || urlPath === "") urlPath = "/index.html";
@@ -73,8 +79,17 @@ function startServer(root) {
         res.end(data);
       });
     });
-    server.on("error", reject);
-    server.listen(0, "127.0.0.1", () => resolve(server.address().port));
+    server.once("error", function (err) {
+      // Preferred fixed port is busy: fall back to a random one so the app
+      // still runs (saves may not carry over for this session only).
+      if (err && err.code === "EADDRINUSE" && port !== 0) {
+        console.warn("[mvdk] port " + port + " busy; using a random port (save may not persist this session).");
+        server.listen(0, "127.0.0.1", () => resolve(server.address().port));
+      } else {
+        server.listen(0, "127.0.0.1", () => resolve(server.address().port));
+      }
+    });
+    server.listen(port, "127.0.0.1", () => resolve(server.address().port));
   });
 }
 
@@ -110,16 +125,29 @@ async function createWindow() {
     return;
   }
 
-  const port = await startServer(root);
+  const port = await startServer(root, FIXED_PORT);
   win.loadURL("http://127.0.0.1:" + port + "/");
 }
 
-app.whenReady().then(createWindow);
-
-app.on("activate", () => {
-  if (BrowserWindow.getAllWindows().length === 0) createWindow();
-});
-
-app.on("window-all-closed", () => {
+// Single instance: keep one window (and thus one stable origin) at a time.
+if (!app.requestSingleInstanceLock()) {
   app.quit();
-});
+} else {
+  app.on("second-instance", () => {
+    const wins = BrowserWindow.getAllWindows();
+    if (wins.length) {
+      if (wins[0].isMinimized()) wins[0].restore();
+      wins[0].focus();
+    }
+  });
+
+  app.whenReady().then(createWindow);
+
+  app.on("activate", () => {
+    if (BrowserWindow.getAllWindows().length === 0) createWindow();
+  });
+
+  app.on("window-all-closed", () => {
+    app.quit();
+  });
+}
