@@ -1,0 +1,36 @@
+diff --git a/scripts/ui/ugc/StampContainer.js b/scripts/ui/ugc/StampContainer.js
+index 72a3725..d09a999 100644
+--- a/scripts/ui/ugc/StampContainer.js
++++ b/scripts/ui/ugc/StampContainer.js
+@@ -50,7 +50,11 @@ var ui;
+ 
+         StampContainer.prototype._selectPage = function (next) {
+             var i, nullPane, lockPane, stampTexture;
+-            var offset, nextPanel = this._currentPanel === 1 ? 2 : 1, points = pt.storage.getStampoints(), stampData = pt.asset.stampDataCache.getData('stamps'), image, progress = pt.storage.getStampUnlockedStatus(), data = this.gpLayout.getLayoutData();
++            var offset, nextPanel = this._currentPanel === 1 ? 2 : 1, points = pt.storage.getStampoints(), stampData = pt.asset.stampDataCache.getData('stamps'), image, progress = pt.storage.getStampUnlockedStatus(), data = this.gpLayout.getLayoutData();
++            if (!stampData) {
++                pt.asset.preloadStampData('stamps');
++                return;
++            }
+ 
+             this.tempLock(21);
+ 
+@@ -145,10 +149,14 @@ var ui;
+             var nullPane;
+             var lockPane;
+             var stampTexture;
+-            var stampData = pt.asset.stampDataCache.getData('stamps');
+-            var image;
+-            var progress = pt.storage.getStampUnlockedStatus();
+-            var tvLytData = this.tvLayout.getLayoutData();
++            var stampData = pt.asset.stampDataCache.getData('stamps');
++            var image;
++            var progress = pt.storage.getStampUnlockedStatus();
++            var tvLytData = this.tvLayout.getLayoutData();
++            if (!stampData) {
++                pt.asset.preloadStampData('stamps');
++                return;
++            }
+ 
+             for (i = 0; i < this._STAMPS_PER_PAGE * this._NUM_PAGES; i++) {
+                 stampTexture = this._textures[i];

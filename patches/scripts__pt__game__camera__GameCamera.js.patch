@@ -1,0 +1,62 @@
+diff --git a/scripts/pt/game/camera/GameCamera.js b/scripts/pt/game/camera/GameCamera.js
+index b366cd8..7bf5242 100644
+--- a/scripts/pt/game/camera/GameCamera.js
++++ b/scripts/pt/game/camera/GameCamera.js
+@@ -254,34 +254,35 @@ var pt;
+                     var scrollSpeed = 8;
+                     var gamepad = pt.input.gamePad;
+                     var xOff = 0;
+-                    var yOff = 0;
+-                    var xNew = this.worldPos.x;
+-                    var yNew = this.worldPos.y;
+-
+-                    if (this._cameraArrows && this._cameraArrows.isPressed(camera.ArrowDirection.AD_LEFT)) {
+-                        xOff = -scrollSpeed;
+-                    } else if (this._cameraArrows && this._cameraArrows.isPressed(camera.ArrowDirection.AD_RIGHT)) {
+-                        xOff = scrollSpeed;
+-                    } else if (gamepad.curHld & (lib.input.GAMEPAD_LEFT | lib.input.GAMEPAD_Y)) {
+-                        xOff = -scrollSpeed;
+-                    } else if (gamepad.curHld & (lib.input.GAMEPAD_RIGHT | lib.input.GAMEPAD_A)) {
+-                        xOff = scrollSpeed;
+-                    } else {
++                    var yOff = 0;
++                    var xNew = this.worldPos.x;
++                    var yNew = this.worldPos.y;
++                    var allowFaceButtonScroll = !gamepad.touch;
++
++                    if (this._cameraArrows && this._cameraArrows.isPressed(camera.ArrowDirection.AD_LEFT)) {
++                        xOff = -scrollSpeed;
++                    } else if (this._cameraArrows && this._cameraArrows.isPressed(camera.ArrowDirection.AD_RIGHT)) {
++                        xOff = scrollSpeed;
++                    } else if ((gamepad.curHld & lib.input.GAMEPAD_LEFT) || (allowFaceButtonScroll && (gamepad.curHld & lib.input.GAMEPAD_Y))) {
++                        xOff = -scrollSpeed;
++                    } else if ((gamepad.curHld & lib.input.GAMEPAD_RIGHT) || (allowFaceButtonScroll && (gamepad.curHld & lib.input.GAMEPAD_A))) {
++                        xOff = scrollSpeed;
++                    } else {
+                         if (gamepad.leftStickX) {
+                             xOff = scrollSpeed * gamepad.leftStickX;
+                         } else {
+                             xOff = scrollSpeed * gamepad.rightStickX;
+                         }
+                     }
+-                    if (this._cameraArrows && this._cameraArrows.isPressed(camera.ArrowDirection.AD_UP)) {
+-                        yOff = -scrollSpeed;
+-                    } else if (this._cameraArrows && this._cameraArrows.isPressed(camera.ArrowDirection.AD_DOWN)) {
+-                        yOff = scrollSpeed;
+-                    } else if (gamepad.curHld & (lib.input.GAMEPAD_UP | lib.input.GAMEPAD_X)) {
+-                        yOff = -scrollSpeed;
+-                    } else if (gamepad.curHld & (lib.input.GAMEPAD_DOWN | lib.input.GAMEPAD_B)) {
+-                        yOff = scrollSpeed;
+-                    } else {
++                    if (this._cameraArrows && this._cameraArrows.isPressed(camera.ArrowDirection.AD_UP)) {
++                        yOff = -scrollSpeed;
++                    } else if (this._cameraArrows && this._cameraArrows.isPressed(camera.ArrowDirection.AD_DOWN)) {
++                        yOff = scrollSpeed;
++                    } else if ((gamepad.curHld & lib.input.GAMEPAD_UP) || (allowFaceButtonScroll && (gamepad.curHld & lib.input.GAMEPAD_X))) {
++                        yOff = -scrollSpeed;
++                    } else if ((gamepad.curHld & lib.input.GAMEPAD_DOWN) || (allowFaceButtonScroll && (gamepad.curHld & lib.input.GAMEPAD_B))) {
++                        yOff = scrollSpeed;
++                    } else {
+                         if (gamepad.leftStickY) {
+                             yOff = scrollSpeed * gamepad.leftStickY;
+                         } else {

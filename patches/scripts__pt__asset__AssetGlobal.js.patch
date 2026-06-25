@@ -1,0 +1,41 @@
+diff --git a/scripts/pt/asset/AssetGlobal.js b/scripts/pt/asset/AssetGlobal.js
+index e0b65aa..ee34e32 100644
+--- a/scripts/pt/asset/AssetGlobal.js
++++ b/scripts/pt/asset/AssetGlobal.js
+@@ -362,20 +362,28 @@
+         }
+         asset.preloadActorData = preloadActorData;
+ 
+-        function preloadAllThemeData() {
+-            var tiles = asset.assetDefLoader.getMapAssets().globalTiles.tileConfigs;
+-            var i, len = tiles.length;
+-            for (i = 0; i < len; ++i) {
+-                preloadTileData(tiles[i]);
++        function preloadAllThemeData() {
++            var tiles = asset.assetDefLoader.getMapAssets().globalTiles.tileConfigs;
++            var i, len = tiles.length;
++            for (i = 0; i < len; ++i) {
++                preloadTileData(tiles[i]);
+             }
+ 
+             var themeDefs = asset.assetDefLoader.getMapAssets().themeDefs.themeDefs;
+             len = themeDefs.length;
+             for (i = 0; i < len; ++i) {
+                 preloadThemeData(themeDefs[i]);
+-            }
+-        }
+-        asset.preloadAllThemeData = preloadAllThemeData;
++            }
++        }
++        asset.preloadAllThemeData = preloadAllThemeData;
++        function preloadGlobalTileData() {
++            var tiles = asset.assetDefLoader.getMapAssets().globalTiles.tileConfigs;
++            var i, len = tiles.length;
++            for (i = 0; i < len; ++i) {
++                preloadTileData(tiles[i]);
++            }
++        }
++        asset.preloadGlobalTileData = preloadGlobalTileData;
+         function preloadTileData(ttCfg) {
+             asset.sharedTileDataCache.preloadData(ttCfg.tileType, ttCfg.url, null, null, onError);
+         }

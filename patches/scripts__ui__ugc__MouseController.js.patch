@@ -1,0 +1,15 @@
+diff --git a/scripts/ui/ugc/MouseController.js b/scripts/ui/ugc/MouseController.js
+index 881fcec..4208020 100644
+--- a/scripts/ui/ugc/MouseController.js
++++ b/scripts/ui/ugc/MouseController.js
+@@ -39,8 +39,8 @@ var ui;
+         };
+ 
+         MouseController.prototype.onMouseDown = function (evt) {
+-            if (window.blockInput || ui.ugc.blockBoardInput || evt.pageY > 407 || evt.target.nodeName !== 'CANVAS')
+-                return;
++            if (window.blockInput || ui.ugc.blockBoardInput || evt.pageY < 0 || evt.pageY >= 480 || evt.target.nodeName !== 'CANVAS')
++                return;
+ 
+             this.down = true;
+             this.x = evt.pageX;

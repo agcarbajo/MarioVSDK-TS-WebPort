@@ -1,0 +1,46 @@
+diff --git a/scripts/pt/map/tile/MagnetTile.js b/scripts/pt/map/tile/MagnetTile.js
+index cea6133..c99bbda 100644
+--- a/scripts/pt/map/tile/MagnetTile.js
++++ b/scripts/pt/map/tile/MagnetTile.js
+@@ -222,21 +222,26 @@ var pt;
+                     this._seData.reset();
+                     _super.prototype.reset.call(this);
+                 };
+-                MagnetTile.prototype.render = function (ctx) {
+-                    var x;
+-                    var y;
+-
+-                    if (this._overlayQuadrantFilled !== Quadrant.ALL) {
+-                        x = this._calcX + this.offset.x;
+-                        y = this._calcY + this.offset.y;
+-
+-                        if (this._renderType & MagnetTileVariant._BASE) {
+-                            ctx.setTransform(1, 0, 0, 1, this.surfaceOffset.x, this.surfaceOffset.y);
+-                            ctx.fillStyle = this.surface;
+-                            ctx.fillRect(x, y, this.width, this.height);
+-                        }
+-                    }
+-                };
++                MagnetTile.prototype.render = function (ctx) {
++                    var x;
++                    var y;
++
++                    if (this._overlayQuadrantFilled !== Quadrant.ALL) {
++                        ctx.save();
++                        try {
++                            x = this._calcX + this.offset.x;
++                            y = this._calcY + this.offset.y;
++
++                            if (this._renderType & MagnetTileVariant._BASE) {
++                                ctx.setTransform(1, 0, 0, 1, this.surfaceOffset.x, this.surfaceOffset.y);
++                                ctx.fillStyle = this.surface;
++                                ctx.fillRect(x, y, this.width, this.height);
++                            }
++                        } finally {
++                            ctx.restore();
++                        }
++                    }
++                };
+                 MagnetTile.prototype.getVariant = function (n, ne, e, se, s, sw, w, nw) {
+                     var MTV_None = MagnetTileVariant.NONE;
+                     var MTV_Base = MagnetTileVariant.BASE;

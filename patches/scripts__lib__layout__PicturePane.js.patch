@@ -1,0 +1,422 @@
+diff --git a/scripts/lib/layout/PicturePane.js b/scripts/lib/layout/PicturePane.js
+index 9378521..380b8bf 100644
+--- a/scripts/lib/layout/PicturePane.js
++++ b/scripts/lib/layout/PicturePane.js
+@@ -6,8 +6,40 @@ var __extends = this.__extends || function (d, b) {
+ };
+ var lib;
+ (function (lib) {
+-    (function (layout) {
+-        var PicturePane = (function (_super) {
++    (function (layout) {
++        function isDrawableImage(image) {
++            if (!image) {
++                return false;
++            }
++            if (typeof HTMLImageElement !== 'undefined' && image instanceof HTMLImageElement) {
++                return !!image.complete && image.naturalWidth > 0 && image.naturalHeight > 0;
++            }
++            if (typeof HTMLCanvasElement !== 'undefined' && image instanceof HTMLCanvasElement) {
++                return image.width > 0 && image.height > 0;
++            }
++            if (typeof HTMLVideoElement !== 'undefined' && image instanceof HTMLVideoElement) {
++                return image.readyState >= 2;
++            }
++            if (typeof ImageBitmap !== 'undefined' && image instanceof ImageBitmap) {
++                return image.width > 0 && image.height > 0;
++            }
++            if (typeof OffscreenCanvas !== 'undefined' && image instanceof OffscreenCanvas) {
++                return image.width > 0 && image.height > 0;
++            }
++            if (typeof SVGImageElement !== 'undefined' && image instanceof SVGImageElement) {
++                return true;
++            }
++            return false;
++        }
++        function getFallbackImage() {
++            if (!layout.PicturePaneFallbackImage) {
++                layout.PicturePaneFallbackImage = document.createElement('canvas');
++                layout.PicturePaneFallbackImage.width = 1;
++                layout.PicturePaneFallbackImage.height = 1;
++            }
++            return layout.PicturePaneFallbackImage;
++        }
++        var PicturePane = (function (_super) {
+             __extends(PicturePane, _super);
+             function PicturePane() {
+                 _super.call(this, "PicturePane");
+@@ -94,12 +126,37 @@ var lib;
+                     this.colors = null;
+                 }
+                 var tex = layoutData.owner.findTexture(materialData.texMap._imageName);
+-                if (tex !== null || tex !== undefined) {
+-                    this.setTexture(tex);
+-                }
+-            };
+-
+-            PicturePane.prototype.renderNoChildren = function (ctx, camera, parentAlpha, debugOn, parentDirty) {
++                if (tex !== null && tex !== undefined) {
++                    this.setTexture(tex);
++                }
++            };
++            PicturePane.prototype._getRenderImage = function (texture) {
++                if (!texture || !isDrawableImage(texture.image))
++                    return getFallbackImage();
++                if (this.colors && window.ChromiumPort && window.ChromiumPort.getTwoColorImage) {
++                    return window.ChromiumPort.getTwoColorImage(texture.image, this.colors);
++                }
++                return texture.image;
++            };
++            PicturePane.prototype._getRenderPattern = function (ctx, texture) {
++                if (!texture)
++                    return null;
++                if (!isDrawableImage(texture.image)) {
++                    return ctx.createPattern(getFallbackImage(), 'repeat');
++                }
++                if (this.colors && window.ChromiumPort && window.ChromiumPort.getTwoColorImage) {
++                    var image = window.ChromiumPort.getTwoColorImage(texture.image, this.colors);
++                    var key = this.colors.map(function (v) { return Math.round((v || 0) * 255); }).join(",");
++                    texture.__chromiumPortPatternCache = texture.__chromiumPortPatternCache || {};
++                    if (!texture.__chromiumPortPatternCache[key]) {
++                        texture.__chromiumPortPatternCache[key] = ctx.createPattern(image, 'repeat');
++                    }
++                    return texture.__chromiumPortPatternCache[key];
++                }
++                return texture.imagePattern;
++            };
++
++            PicturePane.prototype.renderNoChildren = function (ctx, camera, parentAlpha, debugOn, parentDirty) {
+                 if (parentDirty == null)
+                     parentDirty = true;
+ 
+@@ -129,31 +186,33 @@ var lib;
+                     texTransU += this.animData.texTransU;
+                     texTransV += this.animData.texTransV;
+                 }
+-                if (texture) {
+-                    if (ctx.imageSmoothingEnabled != texture.imageSmoothingEnabled) {
+-                        ctx.imageSmoothingEnabled = texture.imageSmoothingEnabled;
+-                    }
+-                    if (this.isPattern) {
+-                        if (this.animData) {
+-                            if (ctx.fillStyle !== texture.imagePattern) {
+-                                ctx.fillStyle = texture.imagePattern;
+-                            }
++                if (texture) {
++                    var renderImage = this._getRenderImage(texture);
++                    var renderPattern = this._getRenderPattern(ctx, texture);
++                    if (ctx.imageSmoothingEnabled != texture.imageSmoothingEnabled) {
++                        ctx.imageSmoothingEnabled = texture.imageSmoothingEnabled;
++                    }
++                    if (this.isPattern) {
++                        if (this.animData) {
++                            if (ctx.fillStyle !== renderPattern) {
++                                ctx.fillStyle = renderPattern;
++                            }
+                             ctx.translate(-texTransU * this.baseData.sizeX, -texTransV * this.baseData.sizeY);
+                             var scaleDifX = this.baseData.sizeX / texture.width;
+                             var scaleDifY = this.baseData.sizeY / texture.height;
+ 
+                             ctx.fillRect(texTransU * this.baseData.sizeX * (1.0 / scaleDifX), texTransV * this.baseData.sizeY * (1.0 / scaleDifY), this.baseData.sizeX * (1.0 / scaleDifX), this.baseData.sizeY * (1.0 / scaleDifY));
+-                        } else {
+-                            if (ctx.fillStyle !== texture.imagePattern) {
+-                                ctx.fillStyle = texture.imagePattern;
+-                            }
++                        } else {
++                            if (ctx.fillStyle !== renderPattern) {
++                                ctx.fillStyle = renderPattern;
++                            }
+ 
+                             ctx.fillRect(0, 0, this.baseData.sizeX, this.baseData.sizeY);
+                         }
+-                    } else {
+-                        ctx.drawImage(texture.image, 0, 0, this.baseData.sizeX, this.baseData.sizeY);
+-                    }
+-                }
++                    } else {
++                        ctx.drawImage(renderImage, 0, 0, this.baseData.sizeX, this.baseData.sizeY);
++                    }
++                }
+                 alpha = (this.baseData.influenceAlpha === true) ? alpha : 1.0;
+                 this.renderData.alpha = (this.baseData.influenceAlpha === true) ? alpha : 1.0;
+             };
+@@ -189,39 +248,41 @@ var lib;
+                 if (alpha != 1.0) {
+                     ctx.globalAlpha = alpha;
+                 }
+-                if (ctx.imageSmoothingEnabled != texture.imageSmoothingEnabled) {
+-                    ctx.imageSmoothingEnabled = texture.imageSmoothingEnabled;
+-                }
+-                var accRenderData = this.renderData.accData[screenType];
+-                if (this.renderData.rotationEnabled) {
++                if (ctx.imageSmoothingEnabled != texture.imageSmoothingEnabled) {
++                    ctx.imageSmoothingEnabled = texture.imageSmoothingEnabled;
++                }
++                var renderImage = this._getRenderImage(texture);
++                var renderPattern = this._getRenderPattern(ctx, texture);
++                var accRenderData = this.renderData.accData[screenType];
++                if (this.renderData.rotationEnabled) {
+                     ctx.setTransform(this.renderData.cosScaleX * camera.screenScale.x, this.renderData.sinScaleX * camera.screenScale.x, -this.renderData.sinScaleY * camera.screenScale.y, this.renderData.cosScaleY * camera.screenScale.y, (accRenderData.accOffsetPosX * camera.screenScale.x), (accRenderData.accOffsetPosY * camera.screenScale.y));
+ 
+-                    if (this.isPattern) {
+-                        if (texture.imagePattern) {
+-                            if (ctx.fillStyle !== texture.imagePattern) {
+-                                ctx.fillStyle = texture.imagePattern;
+-                            }
++                    if (this.isPattern) {
++                        if (renderPattern) {
++                            if (ctx.fillStyle !== renderPattern) {
++                                ctx.fillStyle = renderPattern;
++                            }
+ 
+                             ctx.fillRect(0.1, 0.1, sizeX, sizeY);
+                         }
+-                    } else if (texture.image) {
+-                        ctx.drawImage(texture.image, 0, 0, sizeX, sizeY);
+-                    }
++                    } else if (renderImage) {
++                        ctx.drawImage(renderImage, 0, 0, sizeX, sizeY);
++                    }
+                     ctx.identity();
+                 } else {
+-                    if (this.isPattern) {
+-                        if (texture.imagePattern) {
+-                            var t = (sizeX - texture.width) * 0.5 * camera.screenScale.x;
+-                            var tx = accRenderData.accOffsetPosX * camera.screenScale.x + t;
+-                            ctx.setTransform(this.renderData.cosScaleX * camera.screenScale.x, this.renderData.sinScaleX * camera.screenScale.x, -this.renderData.sinScaleY * camera.screenScale.y, this.renderData.cosScaleY * camera.screenScale.y, tx, (accRenderData.accOffsetPosY * camera.screenScale.y));
+-                            if (ctx.fillStyle !== texture.imagePattern) {
+-                                ctx.fillStyle = texture.imagePattern;
+-                            }
++                    if (this.isPattern) {
++                        if (renderPattern) {
++                            var t = (sizeX - texture.width) * 0.5 * camera.screenScale.x;
++                            var tx = accRenderData.accOffsetPosX * camera.screenScale.x + t;
++                            ctx.setTransform(this.renderData.cosScaleX * camera.screenScale.x, this.renderData.sinScaleX * camera.screenScale.x, -this.renderData.sinScaleY * camera.screenScale.y, this.renderData.cosScaleY * camera.screenScale.y, tx, (accRenderData.accOffsetPosY * camera.screenScale.y));
++                            if (ctx.fillStyle !== renderPattern) {
++                                ctx.fillStyle = renderPattern;
++                            }
+ 
+                             ctx.fillRect(0.1 - t, 0.1, sizeX, sizeY);
+                             ctx.identity();
+                         }
+-                    } else if (texture.image) {
++                    } else if (renderImage) {
+                         var gap_fix = this.wrapU === 'Mirror' ? 0.5 : 0;
+                         if (this.renderData.parentScaleX != 1 || this.renderData.parentScaleY != 1) {
+                             var sx = this.renderData.parentScaleX > 0 ? 1 : -1;
+@@ -233,12 +294,12 @@ var lib;
+                                 ctx.scale(this.renderData.parentScaleX, this.renderData.parentScaleY);
+                                 ctx.translate(sx * accRenderData.accOffsetPosX * camera.screenScale.x, sy * accRenderData.accOffsetPosY * camera.screenScale.y);
+                             }
+-                            ctx.drawImage(texture.image, 0, 0, texture.width, texture.height, 0, 0, sizeX + gap_fix, sizeY);
+-                            ctx.identity();
+-                        } else {
+-                            ctx.drawImage(texture.image, 0, 0, texture.width, texture.height, accRenderData.accOffsetPosX * camera.screenScale.x, accRenderData.accOffsetPosY * camera.screenScale.y, (sizeX + gap_fix) * camera.screenScale.x, sizeY * camera.screenScale.x);
+-                        }
+-                    }
++                            ctx.drawImage(renderImage, 0, 0, texture.width, texture.height, 0, 0, sizeX + gap_fix, sizeY);
++                            ctx.identity();
++                        } else {
++                            ctx.drawImage(renderImage, 0, 0, texture.width, texture.height, accRenderData.accOffsetPosX * camera.screenScale.x, accRenderData.accOffsetPosY * camera.screenScale.y, (sizeX + gap_fix) * camera.screenScale.x, sizeY * camera.screenScale.y);
++                        }
++                    }
+                 }
+ 
+                 if (this.colors) {
+@@ -277,36 +338,38 @@ var lib;
+                 if (alpha != 1.0) {
+                     ctx.globalAlpha = alpha;
+                 }
+-                if (ctx.imageSmoothingEnabled != texture.imageSmoothingEnabled) {
+-                    ctx.imageSmoothingEnabled = texture.imageSmoothingEnabled;
+-                }
+-                var accRenderData = this.renderData.accData[screenType];
+-                if (this.renderData.rotationEnabled) {
++                if (ctx.imageSmoothingEnabled != texture.imageSmoothingEnabled) {
++                    ctx.imageSmoothingEnabled = texture.imageSmoothingEnabled;
++                }
++                var renderImage = this._getRenderImage(texture);
++                var renderPattern = this._getRenderPattern(ctx, texture);
++                var accRenderData = this.renderData.accData[screenType];
++                if (this.renderData.rotationEnabled) {
+                     ctx.setTransform(this.renderData.cosScaleX * camera.screenScale.x, this.renderData.sinScaleX * camera.screenScale.x, -this.renderData.sinScaleY * camera.screenScale.y, this.renderData.cosScaleY * camera.screenScale.y, (accRenderData.accOffsetPosX * camera.screenScale.x), (accRenderData.accOffsetPosY * camera.screenScale.y));
+-                    if (this.isPattern) {
+-                        if (texture.imagePattern) {
+-                            if (ctx.fillStyle !== texture.imagePattern) {
+-                                ctx.fillStyle = texture.imagePattern;
+-                            }
++                    if (this.isPattern) {
++                        if (renderPattern) {
++                            if (ctx.fillStyle !== renderPattern) {
++                                ctx.fillStyle = renderPattern;
++                            }
+ 
+                             ctx.fillRect(0.1, 0.1, sizeX, sizeY);
+                         }
+-                    } else {
+-                        ctx.drawImage(texture.image, 0, 0, sizeX, sizeY);
+-                    }
++                    } else {
++                        ctx.drawImage(renderImage, 0, 0, sizeX, sizeY);
++                    }
+                     ctx.identity();
+                 } else {
+-                    if (this.isPattern) {
+-                        if (texture.imagePattern) {
+-                            ctx.setTransform(this.renderData.cosScaleX * camera.screenScale.x, this.renderData.sinScaleX * camera.screenScale.x, -this.renderData.sinScaleY * camera.screenScale.y, this.renderData.cosScaleY * camera.screenScale.y, (accRenderData.accOffsetPosX * camera.screenScale.x), (accRenderData.accOffsetPosY * camera.screenScale.y));
+-                            if (ctx.fillStyle !== texture.imagePattern) {
+-                                ctx.fillStyle = texture.imagePattern;
+-                            }
++                    if (this.isPattern) {
++                        if (renderPattern) {
++                            ctx.setTransform(this.renderData.cosScaleX * camera.screenScale.x, this.renderData.sinScaleX * camera.screenScale.x, -this.renderData.sinScaleY * camera.screenScale.y, this.renderData.cosScaleY * camera.screenScale.y, (accRenderData.accOffsetPosX * camera.screenScale.x), (accRenderData.accOffsetPosY * camera.screenScale.y));
++                            if (ctx.fillStyle !== renderPattern) {
++                                ctx.fillStyle = renderPattern;
++                            }
+ 
+                             ctx.fillRect(0.1, 0.1, sizeX, sizeY);
+                             ctx.identity();
+                         }
+-                    } else if (texture.image) {
++                    } else if (renderImage) {
+                         if (this.renderData.parentScaleX != 1 || this.renderData.parentScaleY != 1) {
+                             var sx = this.renderData.parentScaleX > 0 ? 1 : -1;
+                             var sy = this.renderData.parentScaleY > 0 ? 1 : -1;
+@@ -318,12 +381,12 @@ var lib;
+                                 ctx.translate(sx * accRenderData.accOffsetPosX * camera.screenScale.x, sy * accRenderData.accOffsetPosY * camera.screenScale.y);
+                             }
+ 
+-                            ctx.drawImage(texture.image, 0, 0, texture.width, texture.height, 0, 0, sizeX * camera.screenScale.x, sizeY * camera.screenScale.y);
+-                            ctx.identity();
+-                        } else {
+-                            ctx.drawImage(texture.image, 0, 0, texture.width, texture.height, accRenderData.accOffsetPosX * camera.screenScale.x, accRenderData.accOffsetPosY * camera.screenScale.y, sizeX * camera.screenScale.x, sizeY * camera.screenScale.x);
+-                        }
+-                    }
++                            ctx.drawImage(renderImage, 0, 0, texture.width, texture.height, 0, 0, sizeX * camera.screenScale.x, sizeY * camera.screenScale.y);
++                            ctx.identity();
++                        } else {
++                            ctx.drawImage(renderImage, 0, 0, texture.width, texture.height, accRenderData.accOffsetPosX * camera.screenScale.x, accRenderData.accOffsetPosY * camera.screenScale.y, sizeX * camera.screenScale.x, sizeY * camera.screenScale.y);
++                        }
++                    }
+                 }
+ 
+                 if (this.colors) {
+@@ -361,16 +424,17 @@ var lib;
+                         ctx.globalAlpha = alpha;
+                     }
+ 
+-                    var texture = this.animData.animTexture;
+-
+-                    var sizeX = baseData.sizeX;
+-                    var sizeY = baseData.sizeY;
++                    var texture = this.animData.animTexture;
++                    var renderImage = this._getRenderImage(texture);
++
++                    var sizeX = baseData.sizeX;
++                    var sizeY = baseData.sizeY;
+ 
+                     if (ctx.imageSmoothingEnabled != texture.imageSmoothingEnabled) {
+                         ctx.imageSmoothingEnabled = texture.imageSmoothingEnabled;
+                     }
+ 
+-                    ctx.drawImage(texture.image, 0, 0, sizeX, sizeY);
++                    ctx.drawImage(renderImage, 0, 0, sizeX, sizeY);
+                 }
+                 alpha = (this.baseData.influenceAlpha === true) ? alpha : parentAlpha;
+                 this.renderData.alpha = (this.baseData.influenceAlpha === true) ? alpha : parentAlpha;
+@@ -390,15 +454,16 @@ var lib;
+ 
+                 ctx.setTransform(camera.screenScale.x, 0, 0, camera.screenScale.y, (this.renderData.accOffsetPosX * camera.screenScale.x), (this.renderData.accOffsetPosY * camera.screenScale.y));
+ 
+-                var texture = this._texture;
+-                var sizeX = baseData.sizeX;
+-                var sizeY = baseData.sizeY;
++                var texture = this._texture;
++                var renderImage = this._getRenderImage(texture);
++                var sizeX = baseData.sizeX;
++                var sizeY = baseData.sizeY;
+ 
+                 if (ctx.imageSmoothingEnabled != texture.imageSmoothingEnabled) {
+                     ctx.imageSmoothingEnabled = texture.imageSmoothingEnabled;
+                 }
+ 
+-                ctx.drawImage(texture.image, 0, 0, sizeX, sizeY);
++                ctx.drawImage(renderImage, 0, 0, sizeX, sizeY);
+ 
+                 for (var i = 0, len = this.children.length; i < len; ++i) {
+                     this.children[i].render(ctx, camera, 1, false);
+@@ -428,13 +493,14 @@ var lib;
+                     if (ctx.globalAlpha !== alpha) {
+                         ctx.globalAlpha = alpha;
+                     }
+-                    var texture = this._texture;
+-                    var sizeX = this.baseData.sizeX;
+-                    var sizeY = this.baseData.sizeY;
+-
+-                    if (ctx.fillStyle !== texture.imagePattern) {
+-                        ctx.fillStyle = texture.imagePattern;
+-                    }
++                    var texture = this._texture;
++                    var renderPattern = this._getRenderPattern(ctx, texture);
++                    var sizeX = this.baseData.sizeX;
++                    var sizeY = this.baseData.sizeY;
++
++                    if (ctx.fillStyle !== renderPattern) {
++                        ctx.fillStyle = renderPattern;
++                    }
+ 
+                     ctx.fillRect(0, 0, sizeX, sizeY);
+                 }
+@@ -507,15 +573,17 @@ var lib;
+                         sizeY += this.animData.sizeYOffset;
+                     }
+ 
+-                    if (texture) {
+-                        if (ctx.imageSmoothingEnabled != texture.imageSmoothingEnabled) {
+-                            ctx.imageSmoothingEnabled = texture.imageSmoothingEnabled;
+-                        }
+-                        if (this.isPattern) {
+-                            if (this.animData) {
+-                                if (ctx.fillStyle !== texture.imagePattern) {
+-                                    ctx.fillStyle = texture.imagePattern;
+-                                }
++                    if (texture) {
++                        var renderImage = this._getRenderImage(texture);
++                        var renderPattern = this._getRenderPattern(ctx, texture);
++                        if (ctx.imageSmoothingEnabled != texture.imageSmoothingEnabled) {
++                            ctx.imageSmoothingEnabled = texture.imageSmoothingEnabled;
++                        }
++                        if (this.isPattern) {
++                            if (this.animData) {
++                                if (ctx.fillStyle !== renderPattern) {
++                                    ctx.fillStyle = renderPattern;
++                                }
+                                 ctx.translate(-texTransU * this.baseData.sizeX, -texTransV * this.baseData.sizeY);
+                                 var scaleDifX = this.baseData.sizeX / texture.width;
+                                 var scaleDifY = this.baseData.sizeY / texture.height;
+@@ -523,17 +591,17 @@ var lib;
+                                 scaleDifY = 1;
+ 
+                                 ctx.fillRect(texTransU * sizeX, texTransV * sizeY, sizeX, sizeY);
+-                            } else {
+-                                if (ctx.fillStyle !== texture.imagePattern) {
+-                                    ctx.fillStyle = texture.imagePattern;
+-                                }
++                            } else {
++                                if (ctx.fillStyle !== renderPattern) {
++                                    ctx.fillStyle = renderPattern;
++                                }
+ 
+                                 ctx.fillRect(0, 0, sizeX, sizeY);
+                             }
+-                        } else {
+-                            ctx.drawImage(texture.image, 0, 0, sizeX, sizeY);
+-                        }
+-                    }
++                        } else {
++                            ctx.drawImage(renderImage, 0, 0, sizeX, sizeY);
++                        }
++                    }
+                 }
+                 alpha = (this.baseData.influenceAlpha === true) ? alpha : parentAlpha;
+                 this.renderData.alpha = (this.baseData.influenceAlpha === true) ? alpha : 1.0;

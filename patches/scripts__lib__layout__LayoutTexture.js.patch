@@ -1,0 +1,43 @@
+diff --git a/scripts/lib/layout/LayoutTexture.js b/scripts/lib/layout/LayoutTexture.js
+index 57ac45b..d42e68b 100644
+--- a/scripts/lib/layout/LayoutTexture.js
++++ b/scripts/lib/layout/LayoutTexture.js
+@@ -16,19 +16,25 @@ var lib;
+                 this.name = (typeof arguments[0] === 'string') ? arguments[0] : (pointer ? pointer.name : '');
+                 this.format = pointer ? pointer.format : 'RGBA8';
+ 
+-                var _self = this;
+-
+-                if (pointer && images.length > 0) {
+-                    onImageLoaded(images[pointer.index]);
+-                } else if (this.name.length > 0) {
+-                    lib.curl(['img!' + this.name], onImageLoaded, onError);
+-                } else {
+-                    this._ready = true;
+-                }
+-
+-                function onImageLoaded(data) {
+-                    _self.width = data.width;
+-                    _self.height = data.height;
++                var _self = this;
++
++                if (pointer && images.length > 0) {
++                    onImageLoaded(images[pointer.index]);
++                } else if (this.name.length > 0) {
++                    lib.curl(['img!' + this.name], onImageLoaded, onError);
++                } else {
++                    this._ready = true;
++                }
++
++                function onImageLoaded(data) {
++                    if (!data) {
++                        console.warn('[chromium-port] Missing layout texture "' + (_self.name || '<unnamed>') + '" at index ' + (pointer ? pointer.index : 'n/a') + '; using transparent placeholder.');
++                        data = document.createElement('canvas');
++                        data.width = 1;
++                        data.height = 1;
++                    }
++                    _self.width = data.width;
++                    _self.height = data.height;
+ 
+                     if (!pointer)
+                         lib.util.CanvasUtil.decodeImage(data);

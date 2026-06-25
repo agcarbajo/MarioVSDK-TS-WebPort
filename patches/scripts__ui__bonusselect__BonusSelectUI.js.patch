@@ -1,0 +1,100 @@
+diff --git a/scripts/ui/bonusselect/BonusSelectUI.js b/scripts/ui/bonusselect/BonusSelectUI.js
+index 5cef8cb..0b46ba8 100644
+--- a/scripts/ui/bonusselect/BonusSelectUI.js
++++ b/scripts/ui/bonusselect/BonusSelectUI.js
+@@ -39,28 +39,36 @@ var ui;
+             this._loadState = BonusLoadState.GC;
+             this._loadStateQue = BonusLoadState.GC;
+             this._loadStateBurnFrames = GC_BURN_FRAMES;
+-            this._flipBit = false;
+-
+-            this._update = this.update;
+-            this.update = this._updateLoadState;
+-
+-            this._tvTexture0 = new lib.layout.Texture(null);
+-            this._tvTexture1 = new lib.layout.Texture(null);
+-
+-            this._setLoadState(BonusLoadState.SoloSnaps);
+-        }
++            this._flipBit = false;
++            this._snapsReady = false;
++
++            this._update = this.update;
++            this.update = this._updateLoadState;
++
++            this._tvTexture0 = new lib.layout.Texture(null);
++            this._tvTexture1 = new lib.layout.Texture(null);
++
++            this._soloSnapsGPData = lib.layout.layoutDataCache.loadData('soloSnapsGP', 'soloSnapsGP', [BonusSelectUI.SNAP_DIR, ''], this._onSoloSnapsReady.bind(this), this._onError.bind(this));
++            this._setLoadState(BonusLoadState.UI);
++        }
+         BonusSelectUI.prototype.destroy = function () {
+             _super.prototype.destroy.call(this);
+         };
+ 
+         BonusSelectUI.prototype._getSnapshot = function (world, level) {
+-            var tex, offset = (this._levelContainer.currentPanel - 1) * 8;
+-
+-            world += 8;
+-            tex = this._soloSnapsGPData.findTexture(world + '-' + level + '_sm');
+-
+-            this._levelContainer.snapshotSignal.dispatch(world, level, tex);
+-        };
++            var tex, offset = (this._levelContainer.currentPanel - 1) * 8;
++            if (!this._snapsReady || !this._soloSnapsGPData || !this._soloSnapsGPData.isReady()) {
++                return;
++            }
++
++            world += 8;
++            tex = this._soloSnapsGPData.findTexture(world + '-' + level + '_sm');
++            if (!tex) {
++                return;
++            }
++
++            this._levelContainer.snapshotSignal.dispatch(world, level, tex);
++        };
+ 
+         BonusSelectUI.prototype._setLargeSnapshot = function (world, level, pane, mapDef) {
+             var tex = this._flipBit ? this._tvTexture0 : this._tvTexture1, ratio, ratioW, ratioH, ctx, oldWidth = mapDef.header.width * pt.map.TileWidth, oldHeight = mapDef.header.height * pt.map.TileHeight;
+@@ -114,10 +122,8 @@ var ui;
+                 case BonusLoadState.GC:
+                     this._loadStateBurnFrames = GC_BURN_FRAMES;
+                     break;
+-                case BonusLoadState.SoloSnaps:
+-                    this._soloSnapsGPData = lib.layout.layoutDataCache.loadData('soloSnapsGP', 'soloSnapsGP', [BonusSelectUI.SNAP_DIR, ''], null, this._onError.bind(this));
+-
+-                    break;
++                case BonusLoadState.SoloSnaps:
++                    break;
+                 case BonusLoadState.UI:
+                     var worldData = pt.asset.assetDefLoader.getMapProjectDef().worlds.slice(0, ui.NUM_WORLDS);
+ 
+@@ -137,8 +143,8 @@ var ui;
+             }
+         };
+ 
+-        BonusSelectUI.prototype._updateLoadState = function () {
+-            switch (this._loadState) {
++        BonusSelectUI.prototype._updateLoadState = function () {
++            switch (this._loadState) {
+                 case BonusLoadState.GC:
+                     if (--this._loadStateBurnFrames < 0) {
+                         this._setLoadState(this._loadStateQue || 0);
+@@ -150,8 +156,15 @@ var ui;
+                         this._setLoadState(BonusLoadState.UI);
+                     }
+                     break;
+-            }
+-        };
++            }
++        };
++
++        BonusSelectUI.prototype._onSoloSnapsReady = function () {
++            this._snapsReady = true;
++            if (this._levelContainer) {
++                this._levelContainer._refreshLevelPanels();
++            }
++        };
+ 
+         BonusSelectUI.prototype._onError = function (ex) {
+             throw ex;

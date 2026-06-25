@@ -1,0 +1,19 @@
+diff --git a/scripts/ui/ugc/TouchPanelController.js b/scripts/ui/ugc/TouchPanelController.js
+index 148a84d..563bd13 100644
+--- a/scripts/ui/ugc/TouchPanelController.js
++++ b/scripts/ui/ugc/TouchPanelController.js
+@@ -21,10 +21,10 @@ var ui;
+             this._touchpanel = this._gamepad.touchPanel;
+         }
+         TouchPanelController.prototype.update = function () {
+-            if (this._touchpanel.screenY > 416) {
+-                this.reset();
+-                if (!this._released) {
+-                    this._released = true;
++            if (this._touchpanel.screenY < 0 || this._touchpanel.screenY >= 480) {
++                this.reset();
++                if (!this._released) {
++                    this._released = true;
+                     this.downReleased = true;
+                 }
+                 return;

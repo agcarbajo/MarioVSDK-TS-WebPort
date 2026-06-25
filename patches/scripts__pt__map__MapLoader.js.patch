@@ -1,0 +1,77 @@
+diff --git a/scripts/pt/map/MapLoader.js b/scripts/pt/map/MapLoader.js
+index 21cc5a9..8277e9e 100644
+--- a/scripts/pt/map/MapLoader.js
++++ b/scripts/pt/map/MapLoader.js
+@@ -6,22 +6,34 @@
+                 this.mapProjectLevelDef = null;
+                 this.mapDef = new map.MapDef();
+             }
+-            MapLoader.prototype.load = function (mapProjectLevelDef, userLoadCallback) {
+-                var thisRef = this;
+-
+-                this.mapLoaded = false;
++            MapLoader.prototype.load = function (mapProjectLevelDef, userLoadCallback) {
++                var thisRef = this;
++
++                this.mapLoaded = false;
+ 
+                 if (this.isMapLoaded()) {
+                     this.unload();
+                 }
+-
+-                this.mapProjectLevelDef = mapProjectLevelDef;
+-                lib.curl('json!' + MapLoader.mapProjectRootDir + this.mapProjectLevelDef.url, function (data) {
+-                    thisRef.mapLoadedCallback(data, userLoadCallback);
+-                }, function () {
+-                    thisRef.mapLoadedError();
+-                });
+-            };
++
++                this.mapProjectLevelDef = mapProjectLevelDef;
++                this._loadMapJsonWithRetry(MapLoader.mapProjectRootDir + this.mapProjectLevelDef.url, userLoadCallback, 0);
++            };
++            MapLoader.prototype._loadMapJsonWithRetry = function (url, userLoadCallback, attempt) {
++                var thisRef = this;
++                var encodedUrl = encodeURI(url);
++
++                lib.curl('json!' + encodedUrl, function (data) {
++                    thisRef.mapLoadedCallback(data, userLoadCallback);
++                }, function (ex) {
++                    if (attempt < MapLoader.MAX_LOAD_RETRIES) {
++                        window.setTimeout(function () {
++                            thisRef._loadMapJsonWithRetry(url, userLoadCallback, attempt + 1);
++                        }, MapLoader.RETRY_DELAY * (attempt + 1));
++                    } else {
++                        thisRef.mapLoadedError(url, ex);
++                    }
++                });
++            };
+             MapLoader.prototype.unload = function () {
+                 this.mapProjectLevelDef = null;
+                 this.mapLoaded = false;
+@@ -43,9 +55,9 @@
+                     this.mapLoaded = true;
+                 }
+             };
+-            MapLoader.prototype.mapLoadedError = function () {
+-                throw new Error('Error loading map file!');
+-            };
++            MapLoader.prototype.mapLoadedError = function (url, ex) {
++                throw new Error('Error loading map file: ' + (url || 'unknown') + (ex ? ' (' + ex + ')' : ''));
++            };
+             MapLoader.prototype.copyMapData = function (data, mapDef) {
+                 mapDef.header = new map.MapHeader();
+                 this.copyMapObject(data.header, mapDef.header);
+@@ -141,8 +153,10 @@
+                     }
+                 }
+             };
+-            MapLoader.mapProjectRootDir = 'json/map/';
+-            return MapLoader;
++            MapLoader.mapProjectRootDir = 'json/map/';
++            MapLoader.MAX_LOAD_RETRIES = 4;
++            MapLoader.RETRY_DELAY = 180;
++            return MapLoader;
+         })();
+         map.MapLoader = MapLoader;
+     })(pt.map || (pt.map = {}));

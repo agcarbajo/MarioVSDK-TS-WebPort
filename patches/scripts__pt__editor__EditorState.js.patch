@@ -1,0 +1,98 @@
+diff --git a/scripts/pt/editor/EditorState.js b/scripts/pt/editor/EditorState.js
+index 497af43..3c4062b 100644
+--- a/scripts/pt/editor/EditorState.js
++++ b/scripts/pt/editor/EditorState.js
+@@ -289,25 +289,29 @@ var pt;
+             }
+         };
+ 
+-        EditorState.prototype.draw = function () {
+-            if (this._subState === EditorState.STATE_RUNNING || this._subState === EditorState.STATE_SETTING_THUMBNAIL) {
+-                var ctx;
+-                var camera;
+-
+-                if (this._tileLayerDirty) {
+-                    pt.render.layerManager.getLayerByName("tile_base").forceRedraw();
+-                    this._tileLayerDirty = false;
+-                }
+-
+-                ctx = this.gpContext;
+-                camera = this.gpCamera;
+-
+-                this.stylusTrailEffect.activateGPRender();
+-                this.tvFrame.activateGPRender();
+-
+-                this.grid.draw(ctx, camera);
+-
+-                this.gpBacking.draw(camera);
++        EditorState.prototype.draw = function () {
++            if (this._subState === EditorState.STATE_RUNNING || this._subState === EditorState.STATE_SETTING_THUMBNAIL) {
++                var ctx;
++                var camera;
++
++                if (this._tileLayerDirty) {
++                    pt.render.layerManager.getLayerByName("tile_base").forceRedraw();
++                    this._tileLayerDirty = false;
++                }
++
++                ctx = this.gpContext;
++                camera = this.gpCamera;
++
++                this.stylusTrailEffect.activateGPRender();
++                this.tvFrame.activateGPRender();
++
++                this.grid.draw(ctx, camera);
++
++                if (pt.asset.gameSharedAssets.background) {
++                    pt.asset.gameSharedAssets.background.setCamera(camera);
++                    pt.asset.gameSharedAssets.background.setRenderTarget(lib.Graphic.BackgroundTarget.kBT_GP);
++                }
++                this.gpBacking.draw(camera);
+ 
+                 if (this._debugDraw) {
+                     ctx.setTransform(1, 0, 0, 1, camera.screenOffset.x - camera.worldPos.x, camera.screenOffset.y - camera.worldPos.y);
+@@ -322,14 +326,18 @@ var pt;
+                 ctx = this.tvContext;
+                 camera = this.tvCamera;
+ 
+-                this.stylusTrailEffect.activateTVRender();
+-                this.tvFrame.activateTVRender();
+-
+-                this.grid.draw(ctx, camera);
+-
+-                this.tvBacking.draw(camera);
+-            }
+-        };
++                this.stylusTrailEffect.activateTVRender();
++                this.tvFrame.activateTVRender();
++
++                this.grid.draw(ctx, camera);
++
++                if (pt.asset.gameSharedAssets.background) {
++                    pt.asset.gameSharedAssets.background.setCamera(camera);
++                    pt.asset.gameSharedAssets.background.setRenderTarget(lib.Graphic.BackgroundTarget.kBT_TV);
++                }
++                this.tvBacking.draw(camera);
++            }
++        };
+ 
+         EditorState.prototype.destroy = function () {
+             this.running = false;
+@@ -521,10 +529,13 @@ var pt;
+ 
+                     this.thumbnailSelector.init();
+ 
+-                    this.tvFrame.init(this.gpCamera, this.tvCamera, EditorState.GP_HUD_HEIGHT, EditorState.TV_HUD_HEIGHT, 0.35, 0.35, pt.Theme[this.map.mapDef.settings.theme]);
+-                    this.stylusTrailEffect.setCameras(this.gpCamera, this.tvCamera);
+-
+-                    this.selector.init();
++                    this.tvFrame.init(this.gpCamera, this.tvCamera, EditorState.GP_HUD_HEIGHT, EditorState.TV_HUD_HEIGHT, 0.35, 0.35, pt.Theme[this.map.mapDef.settings.theme]);
++                    if (pt.asset.gameSharedAssets.background) {
++                        pt.asset.gameSharedAssets.background.setLayerManager(pt.render.layerManager);
++                    }
++                    this.stylusTrailEffect.setCameras(this.gpCamera, this.tvCamera);
++
++                    this.selector.init();
+ 
+                     this.grid.init();
+ 

@@ -1,0 +1,13 @@
+# Build output (the reconstructed, playable port — contains game assets)
+/build/
+
+# Python
+__pycache__/
+*.pyc
+
+# OS / editor cruft
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/

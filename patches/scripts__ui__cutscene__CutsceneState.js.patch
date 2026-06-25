@@ -1,0 +1,314 @@
+diff --git a/scripts/ui/cutscene/CutsceneState.js b/scripts/ui/cutscene/CutsceneState.js
+index 5402917..94e84ca 100644
+--- a/scripts/ui/cutscene/CutsceneState.js
++++ b/scripts/ui/cutscene/CutsceneState.js
+@@ -7,7 +7,7 @@
+ var ui;
+ (function (ui) {
+     var SubState;
+-    (function (SubState) {
++    (function (SubState) {
+         SubState[SubState["Idle"] = 0] = "Idle";
+         SubState[SubState["LoadDefs"] = 1] = "LoadDefs";
+         SubState[SubState["LoadUI"] = 2] = "LoadUI";
+@@ -16,10 +16,53 @@ var ui;
+         SubState[SubState["Running"] = 5] = "Running";
+         SubState[SubState["Exiting"] = 6] = "Exiting";
+ 
+-        SubState[SubState["Exiting_Skip"] = 7] = "Exiting_Skip";
+-    })(SubState || (SubState = {}));
+-
+-    var CutsceneState = (function (_super) {
++        SubState[SubState["Exiting_Skip"] = 7] = "Exiting_Skip";
++    })(SubState || (SubState = {}));
++    function chromiumInstallCutsceneSkipInput() {
++        if (window.__chromiumPortCutsceneSkipInputInstalled) {
++            return;
++        }
++        window.__chromiumPortCutsceneSkipInputInstalled = true;
++        window.__chromiumPortCutsceneSkipRequested = false;
++        window.__chromiumPortCutsceneSkipEnabled = false;
++
++        var requestSkip = function (evt) {
++            if (!window.__chromiumPortCutsceneSkipEnabled) {
++                return;
++            }
++            window.__chromiumPortCutsceneSkipRequested = true;
++            if (window.__chromiumPortSuppressInput) {
++                window.__chromiumPortSuppressInput(650);
++            }
++            if (evt && evt.preventDefault) {
++                evt.preventDefault();
++            }
++            if (evt && evt.stopPropagation) {
++                evt.stopPropagation();
++            }
++            if (evt && evt.stopImmediatePropagation) {
++                evt.stopImmediatePropagation();
++            }
++        };
++
++        window.addEventListener('pointerdown', requestSkip, true);
++        window.addEventListener('mousedown', requestSkip, true);
++        window.addEventListener('touchstart', requestSkip, true);
++        window.addEventListener('keydown', function (evt) {
++            if (evt.key === 'Escape' || evt.key === 'Esc') {
++                requestSkip(evt);
++            }
++        }, true);
++    }
++
++    function chromiumHideSkipPrompt() {
++        var prompt = document.getElementById('chromium-port-cutscene-skip-prompt');
++        if (prompt) {
++            prompt.parentNode.removeChild(prompt);
++        }
++    }
++
++    var CutsceneState = (function (_super) {
+         __extends(CutsceneState, _super);
+         function CutsceneState(gpBacking, tvBacking) {
+             _super.call(this, gpBacking, tvBacking);
+@@ -28,9 +71,10 @@ var ui;
+ 
+             this.cutManager = new pt.display.CutsceneManager();
+ 
+-            this.uiHandler = new ui.CutsceneUI();
+-
+-            this._startSubState(SubState.LoadDefs);
++            this.uiHandler = new ui.CutsceneUI();
++            chromiumInstallCutsceneSkipInput();
++
++            this._startSubState(SubState.LoadDefs);
+ 
+             vsm.forceHBMDisabled = true;
+         }
+@@ -62,35 +106,41 @@ var ui;
+                         this._startSubState(SubState.Running);
+                         break;
+                 }
+-            } else if (!this.cutManager.isDone()) {
+-                this._processInput(pt.input.gamePad);
+-
+-                this.cutManager.update();
++            } else if (!this.cutManager.isDone()) {
++                window.__chromiumPortCutsceneSkipEnabled = !!(this.cutManager.canSkip && this._substate === SubState.Running);
++                if (!window.__chromiumPortCutsceneSkipEnabled) {
++                    chromiumHideSkipPrompt();
++                }
++                this._processInput(pt.input.gamePad);
++
++                this.cutManager.update();
+ 
+                 if (this._substate === SubState.Exiting_Skip) {
+                     this.cutManager.video.ele.tvVolume *= CutsceneState.VIDEO_SKIP_FADE_FACTOR;
+                     this.cutManager.video.ele.gamepadVolume *= CutsceneState.VIDEO_SKIP_FADE_FACTOR;
+                 }
+-            } else if (this._substate === SubState.Running) {
+-                this._startSubState(SubState.Exiting);
+-            }
++            } else if (this._substate === SubState.Running) {
++                this._startSubState(SubState.Exiting);
++            }
+ 
+             _super.prototype.update.call(this);
+-        };
+-
+-        CutsceneState.prototype.draw = function () {
+-            if (this._substate >= SubState.Running) {
+-                var ctx = this.tvBacking.buffer;
+-                this.cutManager.setViewportSize(ctx.canvas.width, ctx.canvas.height, 0, 0);
+-                this.cutManager.render(ctx);
+-
+-                var ctx = this.gpBacking.buffer;
+-                this.cutManager.setViewportSize(ctx.canvas.width, ctx.canvas.height, 0, this._cutScript.images ? -76 : 0);
+-                this.cutManager.render(ctx);
+-            }
+-
+-            _super.prototype.draw.call(this);
+-        };
++        };
++
++        CutsceneState.prototype.draw = function () {
++            _super.prototype.draw.call(this);
++
++            if (this._substate >= SubState.Running) {
++                var ctx = this.tvBacking.buffer;
++                this.cutManager.setViewportSize(ctx.canvas.width, ctx.canvas.height, 0, 0);
++                this.cutManager.render(ctx);
++                this._drawSkipPrompt(ctx);
++
++                var ctx = this.gpBacking.buffer;
++                this.cutManager.setViewportSize(ctx.canvas.width, ctx.canvas.height, 0, this._cutScript.images ? -76 : 0);
++                this.cutManager.render(ctx);
++                this._drawSkipPrompt(ctx);
++            }
++        };
+ 
+         CutsceneState.prototype._startSubState = function (state) {
+             var _self = this;
+@@ -124,44 +174,137 @@ var ui;
+                     this._saveProgress();
+                     window.signals.stateLoadComplete.dispatch();
+                     break;
+-                case SubState.Exiting:
+-                    if (pt.sceneKey === 'ending_movie') {
+-                        pt.sceneKey = 'credits';
+-                        window.signals.requestToSwitchView.dispatch('cutscene');
++                case SubState.Exiting:
++                    window.__chromiumPortCutsceneSkipEnabled = false;
++                    window.__chromiumPortCutsceneSkipRequested = false;
++                    chromiumHideSkipPrompt();
++                    if (this.cutManager && this.cutManager.stop) {
++                        this.cutManager.stop();
++                    }
++                    if (pt.sceneKey === 'ending_movie') {
++                        pt.sceneKey = 'credits';
++                        window.signals.requestToSwitchView.dispatch('cutscene');
+                     } else {
+                         window.signals.requestToSwitchView.dispatch(pt.sceneExitTo);
+-                    }
+-                    break;
+-                case SubState.Exiting_Skip:
+-                    window.signals.requestToSwitchView.dispatch(pt.sceneExitTo);
+-                    break;
+-            }
+-        };
+-
+-        CutsceneState.prototype._parseCutDef = function (cutDef) {
+-            var cutScript = cutDef.cutscenes[pt.sceneKey];
+-            cutScript.name = pt.sceneKey;
+-            return cutScript;
++                    }
++                    break;
++                case SubState.Exiting_Skip:
++                    window.__chromiumPortCutsceneSkipEnabled = false;
++                    window.__chromiumPortCutsceneSkipRequested = false;
++                    chromiumHideSkipPrompt();
++                    if (this.cutManager && this.cutManager.stop) {
++                        this.cutManager.stop();
++                    }
++                    window.signals.requestToSwitchView.dispatch(pt.sceneExitTo);
++                    break;
++            }
+         };
+ 
+-        CutsceneState.prototype._processInput = function (gamePad) {
+-            if (this.cutManager.canSkip) {
+-                if (gamePad.touchTrg && !this.uiHandler.isSkipUp()) {
+-                    this.uiHandler.skipIn();
+-                }
++        CutsceneState.prototype._parseCutDef = function (cutDef) {
++            var cutScript = cutDef.cutscenes[pt.sceneKey];
++            cutScript.name = pt.sceneKey;
++            if (cutScript.video) {
++                cutScript.video.canSkip = true;
++            }
++            return cutScript;
++        };
+ 
+-                if ((gamePad.curTrg & (lib.input.GAMEPAD_PLUS | lib.input.GAMEPAD_A | lib.input.GAMEPAD_B | lib.input.GAMEPAD_X | lib.input.GAMEPAD_Y))) {
++        CutsceneState.prototype._processInput = function (gamePad) {
++            if (this.cutManager.canSkip) {
++                if (window.__chromiumPortCutsceneSkipRequested || gamePad.touchTrg) {
++                    window.__chromiumPortCutsceneSkipRequested = false;
++                    if (window.__chromiumPortSuppressInput) {
++                        window.__chromiumPortSuppressInput(650);
++                    }
++                    this._startSubState(SubState.Exiting_Skip);
++                    return;
++                }
++
++                if ((gamePad.curTrg & (lib.input.GAMEPAD_PLUS | lib.input.GAMEPAD_A | lib.input.GAMEPAD_B | lib.input.GAMEPAD_X | lib.input.GAMEPAD_Y))) {
+                     if (this.uiHandler.isSkipUp() && (gamePad.curTrg & lib.input.GAMEPAD_PLUS)) {
+                         this._startSubState(SubState.Exiting_Skip);
+                     } else {
+                         if (!this.uiHandler.isSkipUp())
+                             this.uiHandler.skipIn();
+                     }
+-                }
+-            }
+-        };
+-
+-        CutsceneState.prototype._saveProgress = function () {
++                }
++            }
++        };
++
++        CutsceneState.prototype._getSkipText = function () {
++            var lang = 'en';
++            if (window.ChromiumPort && ChromiumPort.getEffectiveLanguage) {
++                lang = ChromiumPort.getEffectiveLanguage();
++            } else {
++                lang = lib.locale.LocaleManager.getSystemLocale().split('_')[0];
++            }
++            switch (lang) {
++                case 'es':
++                    return 'Pulsa Esc o toca para saltar';
++                case 'fr':
++                    return 'Appuyez sur Esc ou touchez pour passer';
++                case 'de':
++                    return 'Esc druecken oder beruehren zum Ueberspringen';
++                case 'it':
++                    return 'Premi Esc o tocca per saltare';
++                case 'ja':
++                    return 'Esc またはタッチでスキップ';
++                case 'en':
++                default:
++                    return 'Press Esc or touch to skip';
++            }
++        };
++
++        CutsceneState.prototype._drawSkipPrompt = function (ctx) {
++            if (!this.cutManager.canSkip || this._substate !== SubState.Running)
++                return;
++
++            var text = this._getSkipText();
++            var cWidth = ctx.canvas.width;
++            var cHeight = ctx.canvas.height;
++            var fontSize = Math.max(16, Math.round(cHeight * 0.032));
++            var padX = Math.round(fontSize * 0.85);
++            var padY = Math.round(fontSize * 0.42);
++            var x = 0;
++            var y = Math.round(cHeight * 0.86);
++            var w, h, r;
++
++            ctx.identity();
++            ctx.save();
++            ctx.font = '900 ' + fontSize + 'px Arial, sans-serif';
++            ctx.textBaseline = 'middle';
++            ctx.textAlign = 'center';
++            w = Math.ceil(ctx.measureText(text).width + padX * 2);
++            h = Math.ceil(fontSize + padY * 2);
++            r = Math.round(h / 2);
++            x = Math.round((cWidth - w) / 2);
++            x = Math.max(10, Math.min(x, cWidth - w - 10));
++            y = Math.min(y, cHeight - h - 10);
++
++            ctx.globalAlpha = 0.78;
++            ctx.fillStyle = '#163319';
++            ctx.beginPath();
++            ctx.moveTo(x + r, y);
++            ctx.lineTo(x + w - r, y);
++            ctx.quadraticCurveTo(x + w, y, x + w, y + r);
++            ctx.lineTo(x + w, y + h - r);
++            ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
++            ctx.lineTo(x + r, y + h);
++            ctx.quadraticCurveTo(x, y + h, x, y + h - r);
++            ctx.lineTo(x, y + r);
++            ctx.quadraticCurveTo(x, y, x + r, y);
++            ctx.fill();
++
++            ctx.globalAlpha = 1;
++            ctx.lineWidth = Math.max(2, Math.round(fontSize * 0.11));
++            ctx.strokeStyle = 'rgba(0,0,0,0.65)';
++            ctx.fillStyle = '#ffffff';
++            ctx.strokeText(text, x + w / 2, y + h / 2);
++            ctx.fillText(text, x + w / 2, y + h / 2);
++            ctx.restore();
++        };
++
++        CutsceneState.prototype._saveProgress = function () {
+             var cuts = pt.storage.get('solo.cutscenes');
+             cuts[pt.sceneKey] = true;
+             pt.storage.saveAllProgress();

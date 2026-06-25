@@ -1,0 +1,97 @@
+diff --git a/scripts/bootstrap.js b/scripts/bootstrap.js
+index d9c1dcc..8857c0d 100644
+--- a/scripts/bootstrap.js
++++ b/scripts/bootstrap.js
+@@ -92,14 +92,16 @@ var lib;
+ 
+     var tempWindow = window;
+ 
+-    tempWindow.console.log = function () {
+-    };
+-
+-    tempWindow.console.warn = function () {
+-    };
+-
+-    tempWindow.console.error = function () {
+-    };
++    if (!tempWindow.ChromiumPort) {
++        tempWindow.console.log = function () {
++        };
++
++        tempWindow.console.warn = function () {
++        };
++
++        tempWindow.console.error = function () {
++        };
++    }
+ })(lib || (lib = {}));
+ 
+ var pt;
+@@ -108,22 +110,36 @@ var pt;
+ 
+     var _displayManager;
+ 
+-    var _curlConfig = {
+-        baseUrl: './',
+-        paths: {
+-            code: 'scripts',
+-            lib: 'scripts/lib',
+-            curl: 'scripts/lib/curl'
+-        }
+-    };
+-
+-    window.addEventListener('load', function _onWinLoad(evt) {
+-        window.removeEventListener('load', _onWinLoad);
+-
+-        curl(_curlConfig, [
+-            'json!json/game-classes.json'
+-        ]).then(_loadClasses, _error);
+-    }, false);
++    var _curlConfig = {
++        baseUrl: './',
++        paths: {
++            code: 'scripts',
++            lib: 'scripts/lib',
++            curl: 'scripts/lib/curl'
++        }
++    };
++
++    function _versionSuffix() {
++        var version = window.__chromiumPortVersion || '';
++        return version ? '?v=' + encodeURIComponent(version) : '';
++    }
++
++    window.addEventListener('load', function _onWinLoad(evt) {
++        window.removeEventListener('load', _onWinLoad);
++
++        _waitForSaveBackend().then(function () {
++            curl(_curlConfig, [
++                'json!json/game-classes.json' + _versionSuffix()
++            ]).then(_loadClasses, _error);
++        }, _error);
++    }, false);
++
++    function _waitForSaveBackend() {
++        if (window.ChromiumPortSaveFS && window.ChromiumPortSaveFS.readyPromise) {
++            return window.ChromiumPortSaveFS.readyPromise;
++        }
++        return Promise.resolve();
++    }
+ 
+     function _loadClasses() {
+         var classes = arguments[arguments.length - 1];
+@@ -132,9 +148,11 @@ var pt;
+ 
+         var i = 0, len = classes.length;
+ 
+-        for (i; i < len; i++) {
+-            classes[i] = 'js!code/' + classes[i] + '!order';
+-        }
++        var version = _versionSuffix();
++
++        for (i; i < len; i++) {
++            classes[i] = 'js!code/' + classes[i] + version + '!order';
++        }
+ 
+         curl(classes).then(_init, _error);
+     }

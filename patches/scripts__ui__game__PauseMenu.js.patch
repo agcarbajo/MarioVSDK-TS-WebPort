@@ -1,0 +1,60 @@
+diff --git a/scripts/ui/game/PauseMenu.js b/scripts/ui/game/PauseMenu.js
+index d8f712b..969339e 100644
+--- a/scripts/ui/game/PauseMenu.js
++++ b/scripts/ui/game/PauseMenu.js
+@@ -21,12 +21,13 @@ var ui;
+ 
+                 this.stateChangedSignal.add(this._stateChanged, this);
+             }
+-            PauseMenu.prototype.reset = function () {
+-                _super.prototype.reset.call(this);
+-                this.on = false;
+-                this.resetButtonAnimations();
+-                this._setupStaticText();
+-            };
++            PauseMenu.prototype.reset = function () {
++                _super.prototype.reset.call(this);
++                this.on = false;
++                window.__chromiumPortPauseMenuOpen = false;
++                this.resetButtonAnimations();
++                this._setupStaticText();
++            };
+ 
+             PauseMenu.prototype.setCurrentLevelStatus = function (levelStatus) {
+                 this._levelStatus = levelStatus;
+@@ -38,12 +39,13 @@ var ui;
+                 this.addState('Idle', 'pause_INTRO', ['continue_solo', 'restart_solo', 'exit_solo']);
+             };
+ 
+-            PauseMenu.prototype.pauseIn = function () {
+-                this._exitTo = null;
+-                this.on = true;
+-
+-                this.enter(this.LayoutState.Idle);
+-                pt.gameSignals.pause.dispatch('PauseMenu');
++            PauseMenu.prototype.pauseIn = function () {
++                this._exitTo = null;
++                this.on = true;
++                window.__chromiumPortPauseMenuOpen = true;
++
++                this.enter(this.LayoutState.Idle);
++                pt.gameSignals.pause.dispatch('PauseMenu');
+             };
+ 
+             PauseMenu.prototype.pauseOut = function () {
+@@ -128,10 +130,11 @@ var ui;
+                 this._exit();
+             };
+ 
+-            PauseMenu.prototype._exit = function () {
+-                this.on = false;
+-
+-                switch (this._exitTo) {
++            PauseMenu.prototype._exit = function () {
++                this.on = false;
++                window.__chromiumPortPauseMenuOpen = false;
++
++                switch (this._exitTo) {
+                     case 'continue':
+                         pt.gameSignals.resume.dispatch('PauseMenu');
+                         break;

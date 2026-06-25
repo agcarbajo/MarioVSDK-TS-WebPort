@@ -1,0 +1,57 @@
+diff --git a/json/layerdef.json b/json/layerdef.json
+index 53842ec..58992ab 100644
+--- a/json/layerdef.json
++++ b/json/layerdef.json
+@@ -28,11 +28,11 @@
+ 		{ "name": "effects_top", 		"type": "DIRECT",	"parent": "game",		"backings": null },
+ 		{ "name": "ingame_score",		"type": "DIRECT",	"parent": "game",		"backings": null, "identityParent":true },
+ 		{ "name": "icon",				"type": "DIRECT",	"parent": "game",		"backings": null },
+-		{ "name": "iconGP",				"type": "DIRECT",	"parent": null,			"backings": ["gamepad"] },
+-		{ "name": "ui", 				"type": "DIRECT",	"parent": null,			"backings": ["tv","gamepad"] },
+-		{ "name": "ui_tv", 				"type": "DIRECT",	"parent": null,			"backings": ["tv"], "sorted":true },
+-		{ "name": "ui_gamepad", 		"type": "DIRECT",	"parent": null,			"backings": ["gamepad"] },
+-		{ "name": "overlays", 			"type": "DIRECT",	"parent": null,			"backings": ["tv","gamepad"] }
++		{ "name": "iconGP",				"type": "DIRECT",	"parent": null,			"backings": ["gamepad"], "identityParent":true },
++		{ "name": "ui", 				"type": "DIRECT",	"parent": null,			"backings": ["tv","gamepad"], "identityParent":true },
++		{ "name": "ui_tv", 				"type": "DIRECT",	"parent": null,			"backings": ["tv"], "sorted":true, "identityParent":true },
++		{ "name": "ui_gamepad", 		"type": "DIRECT",	"parent": null,			"backings": ["gamepad"], "identityParent":true },
++		{ "name": "overlays", 			"type": "DIRECT",	"parent": null,			"backings": ["tv","gamepad"], "identityParent":true }
+ 	],
+ 
+ 	"editorLayers": 
+@@ -55,10 +55,10 @@
+ 		{ "name": "slopePoints",				"type": "DIRECT",	"parent": "game",		"backings": null },
+ 		{ "name": "selector",					"type": "DIRECT",	"parent": "game",		"backings": null },
+ 		{ "name": "resizer",					"type": "DIRECT",	"parent": "game",		"backings": null },
+-		{ "name": "scrollArrows",				"type": "DIRECT",	"parent": null,			"backings": ["gamepad"] },
+-		{ "name": "ui", 						"type": "DIRECT",	"parent": null,			"backings": ["tv","gamepad"] },
+-		{ "name": "ui_tv",						"type": "DIRECT",	"parent": null,			"backings": ["tv"] },
+-		{ "name": "ui_gamepad", 				"type": "DIRECT",	"parent": null,			"backings": ["gamepad"] }
++		{ "name": "scrollArrows",				"type": "DIRECT",	"parent": null,			"backings": ["gamepad"], "identityParent":true },
++		{ "name": "ui", 						"type": "DIRECT",	"parent": null,			"backings": ["tv","gamepad"], "identityParent":true },
++		{ "name": "ui_tv",						"type": "DIRECT",	"parent": null,			"backings": ["tv"], "identityParent":true },
++		{ "name": "ui_gamepad", 				"type": "DIRECT",	"parent": null,			"backings": ["gamepad"], "identityParent":true }
+ 	],
+ 
+ 	"snapshotLayers": 
+@@ -94,15 +94,15 @@
+ 	"fishbowlLayers":
+ 	[
+ 		{ "name": "background", 		"type": "BUFFER",	"parent": null,		"backings": ["tv","gamepad"], "size":{"x":1280,"y":720}, "config":{"stencil":false, "graphicsMemory":true} },
+-		{ "name": "bg_ui_gp", 		"type": "DIRECT",	"parent": null,		"backings": ["gamepad"] },
+-		{ "name": "ui_gp", 		"type": "DIRECT",	"parent": null,		"backings": ["gamepad"] },
+-		{ "name": "ui_tv", 		"type": "DIRECT",	"parent": null,		"backings": ["tv"] }
++		{ "name": "bg_ui_gp", 		"type": "DIRECT",	"parent": null,		"backings": ["gamepad"], "identityParent":true },
++		{ "name": "ui_gp", 		"type": "DIRECT",	"parent": null,		"backings": ["gamepad"], "identityParent":true },
++		{ "name": "ui_tv", 		"type": "DIRECT",	"parent": null,		"backings": ["tv"], "identityParent":true }
+ 	],
+ 	
+ 	"uiLayers":
+ 	[
+-		{ "name": "ui_gp", 		"type": "DIRECT",	"parent": null,		"backings": ["gamepad"] },
+-		{ "name": "ui_tv", 		"type": "DIRECT",	"parent": null,		"backings": ["tv"] }
++		{ "name": "ui_gp", 		"type": "DIRECT",	"parent": null,		"backings": ["gamepad"], "identityParent":true },
++		{ "name": "ui_tv", 		"type": "DIRECT",	"parent": null,		"backings": ["tv"], "identityParent":true }
+ 	]
+ 	
+ }

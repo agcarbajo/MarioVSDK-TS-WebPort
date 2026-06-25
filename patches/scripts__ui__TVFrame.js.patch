@@ -1,0 +1,146 @@
+diff --git a/scripts/ui/TVFrame.js b/scripts/ui/TVFrame.js
+index 4aaa3fc..72657b4 100644
+--- a/scripts/ui/TVFrame.js
++++ b/scripts/ui/TVFrame.js
+@@ -194,64 +194,50 @@ var ui;
+ 
+                 ctx.fillRect(camera.screenOffset.x, hudHeight, camera.viewport.getWidth(), camera.screenOffset.y - hudHeight + insetSize);
+                 ctx.fillRect(camera.screenOffset.x, camera.screenOffset.y + camera.viewport.bottom - insetSize, camera.viewport.getWidth(), scrHeight - (camera.screenOffset.y + camera.viewport.bottom - insetSize));
+-            } else {
+-                var wallpaperColorSet = ui.Wallpaper.Colors[this._themeIdx];
+-
+-                lib.display.ShaderManager.setTwoColorBlend(wallpaperColorSet[0], wallpaperColorSet[1], wallpaperColorSet[2], wallpaperColorSet[3], wallpaperColorSet[4], wallpaperColorSet[5], wallpaperColorSet[6], wallpaperColorSet[7]);
+-                lib.display.ShaderManager.setTwoColorTextureShader(ctx, true);
+-
+-                var oldGlobalAlpha = ctx.globalAlpha;
+-                var xScale, yScale;
+-                var texW = 32 - 1, texH = 32 - 1;
+-                var xOffset = 1.0, yOffset = 1.0;
+-                var dx, dy, dw, dh;
+-                xScale = texW / scrWidth;
+-                yScale = texH / scrHeight;
+-
+-                ctx.setTransform(1, 0, 0, 1, 0, 0);
+-
+-                dx = 0;
+-                dy = hudHeight;
+-                dw = camera.screenOffset.x;
+-                dh = scrHeight - hudHeight;
+-                ctx.drawImage(this.gradientActor.texture, dx * xScale + xOffset, dy * yScale + yOffset, dw * xScale, dh * yScale, dx, dy, dw, dh);
+-                dx = camera.screenOffset.x + camera.viewport.right;
+-                dy = hudHeight;
+-                dw = scrWidth - (camera.screenOffset.x + camera.viewport.right);
+-                dh = scrHeight - hudHeight;
+-                ctx.drawImage(this.gradientActor.texture, dx * xScale + xOffset, dy * yScale + yOffset, dw * xScale, dh * yScale, dx, dy, dw, dh);
+-
+-                dx = camera.screenOffset.x;
+-                dy = hudHeight;
+-                dw = camera.viewport.getWidth();
+-                dh = camera.screenOffset.y - hudHeight;
+-                ctx.drawImage(this.gradientActor.texture, dx * xScale + xOffset, dy * yScale + yOffset, dw * xScale, dh * yScale, dx, dy, dw, dh);
+-                dx = camera.screenOffset.x;
+-                dy = camera.screenOffset.y + camera.viewport.bottom;
+-                dw = camera.viewport.getWidth();
+-                dh = scrHeight - (camera.screenOffset.y + camera.viewport.bottom);
+-                ctx.drawImage(this.gradientActor.texture, dx * xScale + xOffset, dy * yScale + yOffset, dw * xScale, dh * yScale, dx, dy, dw, dh);
+-
+-                lib.display.ShaderManager.resetTextureShader(ctx);
+-
+-                var frame = this.logoActor._cells.frames[this.logoActor.getFrame()];
+-
+-                lib.display.ShaderManager.setTwoColorBlend(wallpaperColorSet[8], wallpaperColorSet[9], wallpaperColorSet[10], wallpaperColorSet[11], wallpaperColorSet[12], wallpaperColorSet[13], wallpaperColorSet[14], wallpaperColorSet[15]);
+-                lib.display.ShaderManager.setTwoColorPatternShader(ctx, true);
+-
+-                ctx.setTransform(1, 0, 0, 1, this._offsetX, this._offsetX);
+-                ctx.fillStyle = frame.texture;
+-                ctx.globalAlpha = ui.Wallpaper.LogoAlpha;
+-
+-                ctx.fillRect(0 - this._offsetX, hudHeight - this._offsetY, camera.screenOffset.x, scrHeight - hudHeight);
+-                ctx.fillRect(camera.screenOffset.x + camera.viewport.right - this._offsetX, hudHeight - this._offsetY, scrWidth - (camera.screenOffset.x + camera.viewport.right), scrHeight - hudHeight);
+-
+-                ctx.fillRect(camera.screenOffset.x - this._offsetX, hudHeight - this._offsetY, camera.viewport.getWidth(), camera.screenOffset.y - hudHeight);
+-                ctx.fillRect(camera.screenOffset.x - this._offsetX, camera.screenOffset.y + camera.viewport.bottom - this._offsetY, camera.viewport.getWidth(), scrHeight - (camera.screenOffset.y + camera.viewport.bottom));
+-
+-                lib.display.ShaderManager.resetPatternShader(ctx);
+-
+-                ctx.globalAlpha = oldGlobalAlpha;
++            } else {
++                var wallpaperColorSet = ui.Wallpaper.Colors[this._themeIdx];
++                var oldGlobalAlpha = ctx.globalAlpha;
++                var dx, dy, dw, dh;
++
++                ctx.setTransform(1, 0, 0, 1, 0, 0);
++
++                dx = 0;
++                dy = hudHeight;
++                dw = camera.screenOffset.x;
++                dh = scrHeight - hudHeight;
++                this._fillWallpaperRect(ctx, dx, dy, dw, dh, scrHeight, wallpaperColorSet);
++                dx = camera.screenOffset.x + camera.viewport.right;
++                dy = hudHeight;
++                dw = scrWidth - (camera.screenOffset.x + camera.viewport.right);
++                dh = scrHeight - hudHeight;
++                this._fillWallpaperRect(ctx, dx, dy, dw, dh, scrHeight, wallpaperColorSet);
++
++                dx = camera.screenOffset.x;
++                dy = hudHeight;
++                dw = camera.viewport.getWidth();
++                dh = camera.screenOffset.y - hudHeight;
++                this._fillWallpaperRect(ctx, dx, dy, dw, dh, scrHeight, wallpaperColorSet);
++                dx = camera.screenOffset.x;
++                dy = camera.screenOffset.y + camera.viewport.bottom;
++                dw = camera.viewport.getWidth();
++                dh = scrHeight - (camera.screenOffset.y + camera.viewport.bottom);
++                this._fillWallpaperRect(ctx, dx, dy, dw, dh, scrHeight, wallpaperColorSet);
++
++                var frame = this.logoActor._cells.frames[this.logoActor.getFrame()];
++
++                if (frame && frame.texture) {
++                    ctx.setTransform(1, 0, 0, 1, this._offsetX, this._offsetY);
++                    ctx.fillStyle = frame.texture;
++                    ctx.globalAlpha = oldGlobalAlpha * ui.Wallpaper.LogoAlpha;
++
++                    ctx.fillRect(0 - this._offsetX, hudHeight - this._offsetY, camera.screenOffset.x, scrHeight - hudHeight);
++                    ctx.fillRect(camera.screenOffset.x + camera.viewport.right - this._offsetX, hudHeight - this._offsetY, scrWidth - (camera.screenOffset.x + camera.viewport.right), scrHeight - hudHeight);
++
++                    ctx.fillRect(camera.screenOffset.x - this._offsetX, hudHeight - this._offsetY, camera.viewport.getWidth(), camera.screenOffset.y - hudHeight);
++                    ctx.fillRect(camera.screenOffset.x - this._offsetX, camera.screenOffset.y + camera.viewport.bottom - this._offsetY, camera.viewport.getWidth(), scrHeight - (camera.screenOffset.y + camera.viewport.bottom));
++                }
++
++                ctx.globalAlpha = oldGlobalAlpha;
+ 
+                 ctx.setTransform(1, 0, 0, 1, 0, 0);
+                 ctx.fillStyle = 'rgb(0,0,0)';
+@@ -268,12 +254,26 @@ var ui;
+             this._renderMode = 1;
+         };
+ 
+-        TVFrame.prototype.activateTVRender = function () {
+-            this._renderMode = 0;
+-        };
+-
+-        TVFrame.prototype.changeTheme = function (themeIdx) {
+-            themeIdx = themeIdx < 0 ? 0 : (themeIdx >= 12 ? 11 : themeIdx);
++        TVFrame.prototype.activateTVRender = function () {
++            this._renderMode = 0;
++        };
++
++        TVFrame.prototype._wallpaperColor = function (colorSet, offset) {
++            return 'rgb(' + ~~(colorSet[offset] * 255) + ',' + ~~(colorSet[offset + 1] * 255) + ',' + ~~(colorSet[offset + 2] * 255) + ')';
++        };
++
++        TVFrame.prototype._fillWallpaperRect = function (ctx, x, y, width, height, screenHeight, colorSet) {
++            if (width <= 0 || height <= 0)
++                return;
++            var gradient = ctx.createLinearGradient(0, 0, 0, screenHeight);
++            gradient.addColorStop(0, this._wallpaperColor(colorSet, 0));
++            gradient.addColorStop(1, this._wallpaperColor(colorSet, 4));
++            ctx.fillStyle = gradient;
++            ctx.fillRect(x, y, width, height);
++        };
++
++        TVFrame.prototype.changeTheme = function (themeIdx) {
++            themeIdx = themeIdx < 0 ? 0 : (themeIdx >= 12 ? 11 : themeIdx);
+             this._themeIdx = themeIdx;
+             themeIdx++;
+             this.logoActor.setState('logo' + themeIdx.toString(), true);

@@ -1,0 +1,29 @@
+diff --git a/scripts/pt/display/CutsceneManager.js b/scripts/pt/display/CutsceneManager.js
+index f74a87b..ddbd187 100644
+--- a/scripts/pt/display/CutsceneManager.js
++++ b/scripts/pt/display/CutsceneManager.js
+@@ -177,12 +177,18 @@ var pt;
+                 return (this.video.isDone() && true);
+             };
+ 
+-            CutsceneManager.prototype.destroy = function () {
+-                this.video.destroy();
+-                this._actorDict = null;
+-            };
+-
+-            CutsceneManager.prototype._triggerAnimation = function (overlay) {
++            CutsceneManager.prototype.destroy = function () {
++                this.video.destroy();
++                this._actorDict = null;
++            };
++            CutsceneManager.prototype.stop = function () {
++                if (this.video) {
++                    this.video.stop();
++                }
++                this._playing = false;
++            };
++
++            CutsceneManager.prototype._triggerAnimation = function (overlay) {
+                 var actor = this._actorDict[overlay.actor];
+                 actor.setState(overlay.state, true);
+                 actor.position.x = overlay.offset.x;

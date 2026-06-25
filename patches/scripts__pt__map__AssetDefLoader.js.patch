@@ -1,0 +1,188 @@
+diff --git a/scripts/pt/map/AssetDefLoader.js b/scripts/pt/map/AssetDefLoader.js
+index 7e48261..352ba8c 100644
+--- a/scripts/pt/map/AssetDefLoader.js
++++ b/scripts/pt/map/AssetDefLoader.js
+@@ -5,10 +5,13 @@
+             function AssetDefLoader() {
+                 this.mapAssets = new map.MapAssets();
+                 this.mapProjectDef = new map.MapProjectDef();
+-                this.worldMapDefs = new Array();
+-                this.mapDefLoadCount = 0;
+-                this.allMapDefLoadsBegun = false;
+-                this.assetDefFilesLoaded = false;
++                this.worldMapDefs = new Array();
++                this.worldMapLoaders = {};
++                this.worldMapCallbacks = {};
++                this.mapDefLoadCount = 0;
++                this.priorityMapDefLoadCount = 0;
++                this.allMapDefLoadsBegun = false;
++                this.assetDefFilesLoaded = false;
+             }
+             AssetDefLoader.prototype.load = function (entityDefFilePath, themeDefFilePath, tileDefFilePath, musicDefFilePath, mapProjectDefFilePath) {
+                 var thisRef = this;
+@@ -37,15 +40,21 @@
+             AssetDefLoader.prototype.getLevelCount = function (worldIndex) {
+                 return this.mapProjectDef.worlds[worldIndex].length;
+             };
+-            AssetDefLoader.prototype.getMapProjectLevelDef = function (worldIndex, levelIndex) {
+-                return this.mapProjectDef.worlds[worldIndex][levelIndex];
+-            };
++            AssetDefLoader.prototype.getMapProjectLevelDef = function (worldIndex, levelIndex) {
++                if (!this.mapProjectDef.worlds[worldIndex]) {
++                    return null;
++                }
++                return this.mapProjectDef.worlds[worldIndex][levelIndex];
++            };
+             AssetDefLoader.prototype.getWorldMapProjectLevelDefs = function (worldIndex) {
+                 return this.mapProjectDef.worlds[worldIndex];
+             };
+-            AssetDefLoader.prototype.getMapDef = function (worldIndex, levelIndex) {
+-                return this.worldMapDefs[worldIndex][levelIndex];
+-            };
++            AssetDefLoader.prototype.getMapDef = function (worldIndex, levelIndex) {
++                if (!this.worldMapDefs[worldIndex]) {
++                    return null;
++                }
++                return this.worldMapDefs[worldIndex][levelIndex];
++            };
+             AssetDefLoader.prototype.areAssetDefFilesLoaded = function () {
+                 return this.assetDefFilesLoaded;
+             };
+@@ -67,35 +76,108 @@
+                     this.mapProjectDef.worlds = data[4].worlds;
+                 }
+ 
+-                this.loadAllMapDefs();
+-            };
+-            AssetDefLoader.prototype.loadAllMapDefs = function () {
+-                for (var worldIndex = 0, worldLength = this.mapProjectDef.worlds.length; worldIndex < worldLength; ++worldIndex) {
+-                    var worldMapProjectLevelDefs = this.getWorldMapProjectLevelDefs(worldIndex);
+-                    this.worldMapDefs.push(new Array());
+-                    for (var levelIndex = 0, levelLength = worldMapProjectLevelDefs.length; levelIndex < levelLength; ++levelIndex) {
+-                        this.loadMapDef(worldIndex, levelIndex);
+-                    }
+-                }
+-                console.log('loadAllMapDefs:');
+-                console.log(this.worldMapDefs);
+-                this.allMapDefLoadsBegun = true;
+-            };
+-            AssetDefLoader.prototype.loadMapDef = function (worldIndex, levelIndex) {
+-                var mapProjectLevelDef = this.getMapProjectLevelDef(worldIndex, levelIndex);
+-                var mapLoader = new map.MapLoader();
+-                var that = this;
+-                var onMapLoad = function (mapDef) {
+-                    var mapDefs = that.worldMapDefs[worldIndex];
+-                    mapDefs[levelIndex] = mapDef;
+-                    --that.mapDefLoadCount;
+-                    if (that.allMapDefLoadsBegun && that.mapDefLoadCount == 0) {
+-                        that.assetDefFilesLoaded = true;
+-                    }
+-                };
+-                ++this.mapDefLoadCount;
+-                mapLoader.load(mapProjectLevelDef, onMapLoad);
+-            };
++                this.loadPriorityMapDefs();
++            };
++            AssetDefLoader.prototype._mapKey = function (worldIndex, levelIndex) {
++                return worldIndex + '-' + levelIndex;
++            };
++            AssetDefLoader.prototype._initMapDefArrays = function () {
++                for (var worldIndex = 0, worldLength = this.mapProjectDef.worlds.length; worldIndex < worldLength; ++worldIndex) {
++                    this.worldMapDefs.push(new Array());
++                }
++            };
++            AssetDefLoader.prototype.loadPriorityMapDefs = function () {
++                this._initMapDefArrays();
++                var priority = this.getStartupPriorityMapKeys();
++                if (priority.length === 0) {
++                    this.assetDefFilesLoaded = true;
++                    this.beginPredictiveMapLoads();
++                    return;
++                }
++                this.priorityMapDefLoadCount = priority.length;
++                for (var i = 0; i < priority.length; i++) {
++                    this.ensureMapDef(priority[i].world, priority[i].level, this._onPriorityMapLoaded.bind(this), true);
++                }
++            };
++            AssetDefLoader.prototype._onPriorityMapLoaded = function () {
++                --this.priorityMapDefLoadCount;
++                if (this.priorityMapDefLoadCount <= 0) {
++                    this.assetDefFilesLoaded = true;
++                    this.beginPredictiveMapLoads();
++                }
++            };
++            AssetDefLoader.prototype.getStartupPriorityMapKeys = function () {
++                var keys = [];
++                var seen = {};
++                var out = [];
++                for (var i = 0; i < keys.length; i++) {
++                    var key = this._mapKey(keys[i].world, keys[i].level);
++                    if (!seen[key] && this.getMapProjectLevelDef(keys[i].world, keys[i].level)) {
++                        seen[key] = true;
++                        out.push(keys[i]);
++                    }
++                }
++                return out;
++            };
++            AssetDefLoader.prototype.loadAllMapDefsInBackground = function () {
++                for (var worldIndex = 0, worldLength = this.mapProjectDef.worlds.length; worldIndex < worldLength; ++worldIndex) {
++                    var worldMapProjectLevelDefs = this.getWorldMapProjectLevelDefs(worldIndex);
++                    for (var levelIndex = 0, levelLength = worldMapProjectLevelDefs.length; levelIndex < levelLength; ++levelIndex) {
++                        if (window.ChromiumPortAssetPreloader) {
++                            window.ChromiumPortAssetPreloader.ensureMap(worldIndex, levelIndex, false);
++                        } else {
++                            this.ensureMapDef(worldIndex, levelIndex, null, false);
++                        }
++                    }
++                }
++                this.allMapDefLoadsBegun = true;
++            };
++            AssetDefLoader.prototype.beginPredictiveMapLoads = function () {
++                this.allMapDefLoadsBegun = true;
++                if (window.ChromiumPortAssetPreloader && window.ChromiumPortAssetPreloader.onStartupMapsReady) {
++                    window.ChromiumPortAssetPreloader.onStartupMapsReady();
++                }
++            };
++            AssetDefLoader.prototype.ensureMapDef = function (worldIndex, levelIndex, callback, urgent) {
++                var key = this._mapKey(worldIndex, levelIndex);
++                if (urgent && window.ChromiumPortAssetPreloader) {
++                    window.ChromiumPortAssetPreloader.cancelGroup('maps');
++                }
++                if (this.worldMapDefs[worldIndex] && this.worldMapDefs[worldIndex][levelIndex]) {
++                    if (callback) {
++                        callback(this.worldMapDefs[worldIndex][levelIndex]);
++                    }
++                    return this.worldMapDefs[worldIndex][levelIndex];
++                }
++                if (!this.getMapProjectLevelDef(worldIndex, levelIndex)) {
++                    return null;
++                }
++                if (callback) {
++                    this.worldMapCallbacks[key] = this.worldMapCallbacks[key] || [];
++                    this.worldMapCallbacks[key].push(callback);
++                }
++                if (this.worldMapLoaders[key]) {
++                    return null;
++                }
++                var mapProjectLevelDef = this.getMapProjectLevelDef(worldIndex, levelIndex);
++                var mapLoader = new map.MapLoader();
++                var that = this;
++                var onMapLoad = function (mapDef) {
++                    var mapDefs = that.worldMapDefs[worldIndex];
++                    mapDefs[levelIndex] = mapDef;
++                    delete that.worldMapLoaders[key];
++                    --that.mapDefLoadCount;
++                    var callbacks = that.worldMapCallbacks[key] || [];
++                    delete that.worldMapCallbacks[key];
++                    for (var i = 0; i < callbacks.length; i++) {
++                        callbacks[i](mapDef);
++                    }
++                };
++                ++this.mapDefLoadCount;
++                this.worldMapLoaders[key] = mapLoader;
++                mapLoader.load(mapProjectLevelDef, onMapLoad);
++                return null;
++            };
+             AssetDefLoader.prototype.assetDefLoadError = function (ex) {
+                 throw ex;
+             };

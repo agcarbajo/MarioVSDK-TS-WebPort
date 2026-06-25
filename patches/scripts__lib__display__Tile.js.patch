@@ -1,0 +1,40 @@
+diff --git a/scripts/lib/display/Tile.js b/scripts/lib/display/Tile.js
+index a2863ab..c777eb3 100644
+--- a/scripts/lib/display/Tile.js
++++ b/scripts/lib/display/Tile.js
+@@ -43,18 +43,23 @@ var lib;
+                     ctx.imageSmoothingEnabled = this.imageSmoothingEnabled;
+                 }
+ 
+-                ctx.identity();
+-
+-                var x = this._calcX + this.offset.x;
+-                var y = this._calcY + this.offset.y;
+-
+-                if (this._textureType !== TileTextureType.NONE) {
+-                    if (this._textureType === TileTextureType.IMAGE || this._textureType === TileTextureType.CANVAS) {
+-                        ctx.drawImage(this.texture, x, y, this.width, this.height);
+-                    } else if (this._textureType === TileTextureType.IMAGE_QUAD) {
+-                    }
+-                }
+-            };
++                ctx.save();
++                try {
++                    ctx.identity();
++
++                    var x = this._calcX + this.offset.x;
++                    var y = this._calcY + this.offset.y;
++
++                    if (this._textureType !== TileTextureType.NONE) {
++                        if (this._textureType === TileTextureType.IMAGE || this._textureType === TileTextureType.CANVAS) {
++                            ctx.drawImage(this.texture, x, y, this.width, this.height);
++                        } else if (this._textureType === TileTextureType.IMAGE_QUAD) {
++                        }
++                    }
++                } finally {
++                    ctx.restore();
++                }
++            };
+ 
+             Tile.prototype._init = function (config) {
+                 this.tilePos = new lib.math.Vec2(config.tileX, config.tileY);

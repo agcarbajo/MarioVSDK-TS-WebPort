@@ -1,0 +1,178 @@
+diff --git a/scripts/lib/background/Background.js b/scripts/lib/background/Background.js
+index 9fc0b8a..0aff74b 100644
+--- a/scripts/lib/background/Background.js
++++ b/scripts/lib/background/Background.js
+@@ -22,10 +22,14 @@ var lib;
+                 this.next = null;
+                 this.visible = false;
+                 this.zIndex = 0;
+-                this.imageSmoothingEnabled = true;
+-                this.list = null;
+-                this.step = 0;
+-            }
++                this.imageSmoothingEnabled = true;
++                this.list = null;
++                this.step = 0;
++                this._fileName = "";
++                this._fallbackImage = null;
++                this._fallbackReady = false;
++                this._fallbackTile = false;
++            }
+             Background.prototype.setLayerManager = function (layerManager) {
+                 this._layerManager = layerManager;
+                 var layer = this._layerManager.getLayerByName('background');
+@@ -33,13 +37,15 @@ var lib;
+                     layer.addChild(this);
+                 }
+             };
+-            Background.prototype.load = function (fileName) {
+-                if (fileName.length === 0) {
+-                    console.error('Theme background is not set');
+-                    this._isLoaded = true;
+-                    return;
+-                }
+-                this._layout = lib.layout.Layout.createLayout('backgroundData/', fileName);
++            Background.prototype.load = function (fileName) {
++                if (fileName.length === 0) {
++                    console.error('Theme background is not set');
++                    this._isLoaded = true;
++                    return;
++                }
++                this._fileName = fileName;
++                this._loadFallbackImage(fileName);
++                this._layout = lib.layout.Layout.createLayout('backgroundData/', fileName);
+                 var _self = this;
+                 var setAnimation = function (layout) {
+                     _self._isLoaded = true;
+@@ -84,11 +90,16 @@ var lib;
+                 this._layout.getLayoutData().forceTreeOptimization();
+                 this._blendColorR = this._blendColorG = this._blendColorB = 1.0;
+             };
+-            Background.prototype.render = function (ctx) {
+-                var grayscaleEnable = pt.game.screenEffect.isGrayscaleEnabled();
+-
+-                ctx.save();
+-                ctx.identity();
++            Background.prototype.render = function (ctx) {
++                var grayscaleEnable = pt.game.screenEffect.isGrayscaleEnabled();
++
++                ctx.save();
++                ctx.identity();
++
++                if ((!this._layout || !this._isLoaded) && this._renderFallback(ctx)) {
++                    ctx.restore();
++                    return;
++                }
+ 
+                 if (this._blendColorR !== 1.0 || this._blendColorG !== 1.0 || this._blendColorB !== 1.0) {
+                     lib.display.ShaderManager.setRGBSBlend(this._blendColorR, this._blendColorG, this._blendColorB, 1.0 - pt.game.screenEffect.grayScaleEffectBlend);
+@@ -134,13 +145,102 @@ var lib;
+                 this._layerManager = null;
+                 this._camera = null;
+             };
+-            Background.prototype.destroy = function () {
+-                this.clear();
+-                this._layout.destroy();
+-                this._layout = null;
+-            };
+-            return Background;
+-        })();
++            Background.prototype.destroy = function () {
++                this.clear();
++                this._layout.destroy();
++                this._layout = null;
++                this._fallbackImage = null;
++            };
++            Background.prototype._loadFallbackImage = function (fileName) {
++                var img = new Image();
++                var _self = this;
++                var fallbackName = Background._fallbackImageMap[fileName] || fileName;
++                this._fallbackReady = false;
++                this._fallbackTile = fallbackName === 'EditPlaytest';
++                img.onload = function () {
++                    _self._fallbackReady = true;
++                };
++                img.onerror = function () {
++                    _self._fallbackImage = null;
++                    _self._fallbackReady = false;
++                };
++                var version = window.__chromiumPortVersion || new URLSearchParams(window.location.search).get('v') || '';
++                img.src = 'converted/backgroundData/' + fallbackName + '.png' + (version ? '?v=' + encodeURIComponent(version) : '');
++                this._fallbackImage = img;
++            };
++            Background.prototype._renderFallback = function (ctx) {
++                if (!window.__chromiumPortSimpleBackgrounds)
++                    return false;
++
++                ctx.setTransform(1, 0, 0, 1, 0, 0);
++                ctx.globalCompositeOperation = 'source-over';
++                ctx.globalAlpha = 1.0;
++
++                var width = ctx.canvas.width;
++                var height = ctx.canvas.height;
++                var top = ctx.createLinearGradient(0, 0, 0, height);
++                var r = ~~(145 * this._blendColorR);
++                var g = ~~(214 * this._blendColorG);
++                var b = ~~(255 * this._blendColorB);
++                top.addColorStop(0, 'rgb(' + r + ',' + g + ',' + b + ')');
++                r = ~~(189 * this._blendColorR);
++                g = ~~(239 * this._blendColorG);
++                b = ~~(255 * this._blendColorB);
++                top.addColorStop(0.55, 'rgb(' + r + ',' + g + ',' + b + ')');
++                r = ~~(127 * this._blendColorR);
++                g = ~~(200 * this._blendColorG);
++                b = ~~(244 * this._blendColorB);
++                top.addColorStop(1, 'rgb(' + r + ',' + g + ',' + b + ')');
++                ctx.fillStyle = top;
++                ctx.fillRect(0, 0, width, height);
++
++                if (!this._fallbackReady || !this._fallbackImage)
++                    return true;
++
++                var img = this._fallbackImage;
++                if (this._fallbackTile) {
++                    var oldSmoothing = ctx.imageSmoothingEnabled;
++                    var pattern = ctx.createPattern(img, 'repeat');
++                    ctx.imageSmoothingEnabled = false;
++                    if (pattern) {
++                        ctx.globalAlpha = 0.55;
++                        ctx.fillStyle = pattern;
++                        ctx.fillRect(0, 0, width, height);
++                        ctx.globalAlpha = 1.0;
++                    }
++                    ctx.imageSmoothingEnabled = oldSmoothing;
++                    return true;
++                }
++                var scale = Math.max(width / img.width, height / img.height);
++                var drawWidth = img.width * scale;
++                var drawHeight = img.height * scale;
++                var cameraX = this._camera ? this._camera.worldPos.x : 0;
++                var parallaxX = -(cameraX * 0.08) % Math.max(1, drawWidth - width);
++                var drawX = Math.min(0, parallaxX);
++                var drawY = height - drawHeight;
++                ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
++                if (drawX > width - drawWidth) {
++                    ctx.drawImage(img, drawX + drawWidth, drawY, drawWidth, drawHeight);
++                }
++                return true;
++            };
++            Background._fallbackImageMap = {
++                '01_CH': '01_CH',
++                '02_JJ': '02_JJ',
++                '03_BR': '03_BR',
++                '03_TT': '03_TT',
++                '04_UC': '04_UC',
++                '04_WM': '04_WM',
++                '05_SS': '05_SS_7',
++                '06_CA': '06_CA_2',
++                '07_CC': '07_CC_7',
++                '08_SSW': '08_SSW_1',
++                '09_TL': '09_TL',
++                '10_GCL': '10_GCL_6',
++                'EditPlaytest': 'EditPlaytest'
++            };
++            return Background;
++        })();
+         Graphic.Background = Background;
+     })(lib.Graphic || (lib.Graphic = {}));
+     var Graphic = lib.Graphic;

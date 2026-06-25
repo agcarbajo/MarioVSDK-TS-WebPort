@@ -1,0 +1,23 @@
+diff --git a/scripts/pt/ugc/sequences/SyncCommunitySequence.js b/scripts/pt/ugc/sequences/SyncCommunitySequence.js
+index e290d74..0dea351 100644
+--- a/scripts/pt/ugc/sequences/SyncCommunitySequence.js
++++ b/scripts/pt/ugc/sequences/SyncCommunitySequence.js
+@@ -73,10 +73,14 @@ var pt;
+ 
+                     case SyncCommunityState.CheckFirstEnter:
+                         var ugcCurrent = pt.storage.getUGCCurrent();
+-                        if (!ugcCurrent.communityEntered) {
+-                            var stampData = pt.asset.stampDataCache.getData('stamps');
+-                            var stampUnlockedStatus = pt.storage.getStampUnlockedStatus();
+-                            stampData.unlockStampTier(stampUnlockedStatus, 0);
++                        if (!ugcCurrent.communityEntered) {
++                            var stampData = pt.asset.stampDataCache.getData('stamps');
++                            if (!stampData) {
++                                pt.asset.preloadStampData('stamps');
++                                return;
++                            }
++                            var stampUnlockedStatus = pt.storage.getStampUnlockedStatus();
++                            stampData.unlockStampTier(stampUnlockedStatus, 0);
+ 
+                             ugcCurrent.communityEntered = true;
+ 

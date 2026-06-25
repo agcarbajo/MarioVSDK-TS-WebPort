@@ -1,0 +1,133 @@
+diff --git a/scripts/lib/media/Video.js b/scripts/lib/media/Video.js
+index c8ce400..e6594ca 100644
+--- a/scripts/lib/media/Video.js
++++ b/scripts/lib/media/Video.js
+@@ -50,24 +50,38 @@ var lib;
+                 configurable: true
+             });
+ 
+-            Video.prototype.render = function (ctx) {
+-                ctx.setTransform(this.scale, 0, 0, this.scale, this.position.x, this.position.y);
+-
+-                ctx.drawImage(this._video, 0, 0, this.width, this.height);
+-            };
+-
+-            Video.prototype.load = function (url) {
+-                if (this._srcURL !== url) {
+-                    this._ready = false;
+-                    this._video.src = this._srcURL = url;
+-                }
+-            };
+-            Video.prototype.play = function () {
+-                this._video.play();
+-            };
+-            Video.prototype.pause = function () {
+-                this._video.pause();
+-            };
++            Video.prototype.render = function (ctx) {
++                this._applyVolume();
++                ctx.setTransform(this.scale, 0, 0, this.scale, this.position.x, this.position.y);
++
++                ctx.drawImage(this._video, 0, 0, this.width, this.height);
++            };
++
++            Video.prototype.load = function (url) {
++                if (this._srcURL !== url) {
++                    this._ready = false;
++                    this._applyVolume();
++                    this._video.src = this._srcURL = url;
++                    this._video.load();
++                }
++            };
++            Video.prototype.play = function () {
++                this._applyVolume();
++                this._video.play();
++            };
++            Video.prototype.pause = function () {
++                this._video.pause();
++            };
++            Video.prototype.stop = function () {
++                this.pause();
++                try {
++                    this._video.currentTime = 0;
++                } catch (err) {
++                }
++                this._video.removeAttribute('src');
++                this._video.load();
++                this._ready = false;
++            };
+ 
+             Video.prototype.isReady = function () {
+                 return this._ready;
+@@ -77,13 +91,12 @@ var lib;
+                 return this._video.ended;
+             };
+ 
+-            Video.prototype.destroy = function () {
+-                this.pause();
+-                this._video.src = '';
+-
+-                this._video.removeEventListener('loadedmetadata', this._onLoadedDelegate);
+-                this._video.removeEventListener('canplaythrough', this._onReadyDelegate);
+-                this._video.removeEventListener('error', this._onErrorDelegate);
++            Video.prototype.destroy = function () {
++                this.stop();
++
++                this._video.removeEventListener('loadedmetadata', this._onLoadedDelegate);
++                this._video.removeEventListener('canplaythrough', this._onReadyDelegate);
++                this._video.removeEventListener('error', this._onErrorDelegate);
+                 this._onLoadedDelegate = null;
+                 this._onReadyDelegate = null;
+                 this._onErrorDelegate = null;
+@@ -95,16 +108,41 @@ var lib;
+                 this.duration = this._video.duration;
+             };
+ 
+-            Video.prototype._onReady = function (evt) {
+-                this.visible = true;
+-                this._ready = true;
+-            };
+-
+-            Video.prototype._onError = function (evt) {
+-                console.error(evt);
+-            };
+-            return Video;
+-        })();
++            Video.prototype._onReady = function (evt) {
++                this.visible = true;
++                this._ready = true;
++                this._applyVolume();
++            };
++
++            Video.prototype._onError = function (evt) {
++                console.error(evt);
++            };
++            Video.prototype._applyVolume = function () {
++                var player = lib.sound && lib.sound.SoundPlayer && lib.sound.SoundPlayer.instance;
++                var musicVolume = 1.0;
++                var outputVolume = 1.0;
++
++                try {
++                    if (window.localStorage && window.localStorage.getItem('chromiumPortMusicVolume') !== null) {
++                        musicVolume = Math.max(0, Math.min(1, Number(window.localStorage.getItem('chromiumPortMusicVolume')) / 100));
++                    }
++                } catch (err) {
++                }
++
++                if (player) {
++                    if (player.getTvMusicVolumeMultiplier && player.getGpMusicVolumeMultiplier) {
++                        musicVolume = Math.max(player.getTvMusicVolumeMultiplier(), player.getGpMusicVolumeMultiplier());
++                    }
++                    outputVolume = Math.max(this._video.tvVolume || 0, this._video.gamepadVolume || 0);
++                    if (outputVolume <= 0) {
++                        outputVolume = 1.0;
++                    }
++                }
++
++                this._video.volume = Math.max(0, Math.min(1, musicVolume * outputVolume));
++            };
++            return Video;
++        })();
+         media.Video = Video;
+     })(lib.media || (lib.media = {}));
+     var media = lib.media;
