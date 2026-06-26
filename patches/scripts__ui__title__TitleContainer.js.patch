@@ -1,8 +1,8 @@
 diff --git a/scripts/ui/title/TitleContainer.js b/scripts/ui/title/TitleContainer.js
-index 42fc768..90a1711 100644
+index 42fc768..28c80b4 100644
 --- a/scripts/ui/title/TitleContainer.js
 +++ b/scripts/ui/title/TitleContainer.js
-@@ -53,9 +53,27 @@ var ui;
+@@ -53,9 +53,22 @@ var ui;
                  var ugcCurrent = pt.storage.getUGCCurrent();
                  var msg;
                  this._exitTo = newView;
@@ -15,22 +15,17 @@ index 42fc768..90a1711 100644
  
                  switch (newView) {
                      case 'community':
-+                        if (window.ChromiumPortCommunity) {
-+                            // Use the custom community backend instead of the
-+                            // (unavailable) Miiverse servers.
-+                            if (!window.ChromiumPortCommunity.isReady()) {
-+                                window.ChromiumPortCommunity.requireSetup(function () {
-+                                    window.ChromiumPortCommunity.openBrowser();
-+                                });
-+                            } else {
-+                                window.ChromiumPortCommunity.openBrowser();
-+                            }
++                        // Require a community profile + connected server first;
++                        // then enter the NATIVE community (backed by the server
++                        // via the community-net bridge).
++                        if (window.ChromiumPortCommunity && !window.ChromiumPortCommunity.isReady()) {
++                            window.ChromiumPortCommunity.requireSetup();
 +                            return;
 +                        }
                          if (!ugcCurrent.permissionGranted) {
                              this._permissionsFlow.completeSignal.addOnce(this._exitToCommunity, this);
  
-@@ -177,6 +195,9 @@ var ui;
+@@ -177,6 +190,9 @@ var ui;
              if (!ui.RewardContainer.needsUnlockDialog()) {
                  this.playMusic();
              }
