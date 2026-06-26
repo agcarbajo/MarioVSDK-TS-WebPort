@@ -1,0 +1,12 @@
+{
+  "name": "mvdk-community-server",
+  "version": "0.1.0",
+  "description": "Community backend (profiles, level sharing, stars, comments, admin panel) for the MvDK: Tipping Stars web port.",
+  "main": "server.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

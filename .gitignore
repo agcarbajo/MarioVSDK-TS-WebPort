@@ -1,22 +1,23 @@
-# Build output (the reconstructed, playable port — contains game assets)
-/build/
+# Runtime data (user uploads, avatars, db, admin token)
+/data/
 
-# Packaged desktop app output (executable + bundled game assets)
-/dist/
+# Node
+node_modules/
+*.log
 
-# Electron build dependencies (downloaded by npm install)
-/electron/node_modules/
-
-# Generated app icon (derived from the user's game files at build time)
-/electron/game-icon.ico
-
-# Python
-__pycache__/
-*.pyc
-
-# OS / editor cruft
+# OS / editor
 .DS_Store
 Thumbs.db
-*.swp
-.idea/
 .vscode/
+.idea/
+
+# This branch holds the server only; ignore client build artifacts that may be
+# present in a shared working tree (the client lives on the 'main' branch).
+build/
+dist/
+electron/
+host/
+overlay/
+patches/
+__pycache__/
+*.pyc

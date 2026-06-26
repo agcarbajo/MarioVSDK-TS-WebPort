@@ -1,4 +1,0 @@
-# Patch files encode the EXACT line endings (CRLF/LF) of the game files they
-# target. Git must never convert their line endings or they will fail to apply.
-*.patch -text
-patches/_index.txt -text

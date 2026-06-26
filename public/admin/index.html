@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MvDK Community — Admin</title>
+<style>
+  :root { --bg:#0f1320; --card:#1a2032; --line:#2b3450; --txt:#e7ecff; --mut:#9aa6c8; --acc:#ffc629; --danger:#ff5b6e; --gold:#ffd54a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:14px/1.45 system-ui,Segoe UI,Arial,sans-serif; background:var(--bg); color:var(--txt); }
+  header { display:flex; align-items:center; gap:14px; padding:14px 20px; background:#141a2b; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
+  header h1 { font-size:16px; margin:0; }
+  header .stat { color:var(--mut); font-size:12px; }
+  header .right { margin-left:auto; display:flex; gap:8px; align-items:center; }
+  input, button { font:inherit; }
+  input[type=text],input[type=password]{ background:#0c1120; border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:7px 10px; }
+  button { background:#27314e; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer; }
+  button:hover { background:#324063; }
+  button.danger { background:#3a1620; border-color:#5e2230; color:#ffb3bd; }
+  button.danger:hover { background:#56202e; }
+  button.gold { background:#4a3a10; border-color:#6e551a; color:var(--gold); }
+  button.gold.on { background:var(--acc); color:#1a1300; border-color:var(--acc); font-weight:700; }
+  nav { display:flex; gap:6px; padding:14px 20px 0; }
+  nav button { border-radius:999px; }
+  nav button.active { background:var(--acc); color:#1a1300; border-color:var(--acc); font-weight:700; }
+  main { padding:16px 20px 60px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; gap:12px; align-items:center; }
+  .card img.thumb { width:64px; height:48px; border-radius:8px; object-fit:cover; background:#0c1120; flex:0 0 auto; }
+  .card img.ava { width:48px; height:48px; border-radius:10px; object-fit:cover; background:#0c1120; }
+  .card .meta { flex:1; min-width:0; } .card .meta.click { cursor:pointer; }
+  .card .meta b { font-size:14px; }
+  .card .meta small { color:var(--mut); display:block; }
+  .card .acts { display:flex; gap:6px; flex-wrap:wrap; }
+  .pill { font-size:11px; color:var(--mut); border:1px solid var(--line); border-radius:999px; padding:1px 8px; margin-left:6px; }
+  .pill.official { color:#1a1300; background:var(--gold); border-color:var(--gold); font-weight:700; }
+  .memo { width:80px; height:30px; object-fit:contain; background:#fff; border-radius:6px; cursor:pointer; }
+  .empty { color:var(--mut); padding:30px; text-align:center; }
+  .hidden-row { opacity:.5; }
+  .login { max-width:380px; margin:80px auto; }
+  .login .card { display:block; }
+  .login h2 { margin:0 0 6px; } .login p { color:var(--mut); margin:0 0 14px; }
+  .login input { width:100%; margin-bottom:10px; }
+  .banned { color:var(--danger); font-weight:700; }
+  .modal-bg { position:fixed; inset:0; background:rgba(4,8,20,.7); display:flex; align-items:center; justify-content:center; z-index:20; padding:20px; }
+  .modal { background:var(--card); border:1px solid var(--line); border-radius:16px; max-width:680px; width:100%; max-height:90vh; overflow:auto; padding:18px 20px; }
+  .modal h2 { margin:0 0 4px; } .modal .close { float:right; }
+  .modal img.preview { width:100%; max-width:360px; border-radius:10px; background:#0c1120; display:block; margin:8px 0; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; margin:10px 0; }
+  .kv span:nth-child(odd){ color:var(--mut); }
+  .cmt { border-top:1px solid var(--line); padding:8px 0; display:flex; gap:10px; align-items:center; }
+  .cmt img { width:96px; height:36px; object-fit:contain; background:#fff; border-radius:6px; }
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<script>
+const $ = (s,r=document)=>r.querySelector(s);
+const api = (p,opts={}) => fetch(p, Object.assign({headers:{'X-Admin-Token':token(),'Content-Type':'application/json'}}, opts));
+const token = () => localStorage.getItem('mvdk_admin_token') || '';
+const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dt = t => new Date(t).toLocaleString();
+let data = {users:[],levels:[],comments:[]};
+let tab = 'levels';
+
+async function load(){
+  const r = await api('/api/admin/overview');
+  if(r.status===401){ renderLogin('Invalid token'); return; }
+  data = await r.json();
+  render();
+}
+function renderLogin(err){
+  $('#app').innerHTML = `<div class="login"><div class="card">
+    <h2>Admin login</h2><p>Enter the server's admin token (printed in the server console / data/admin-token.txt).</p>
+    ${err?`<p class="banned">${esc(err)}</p>`:''}
+    <input type="password" id="tok" placeholder="admin token" value="${esc(token())}">
+    <button id="go">Enter</button></div></div>`;
+  $('#go').onclick = ()=>{ localStorage.setItem('mvdk_admin_token',$('#tok').value.trim()); load(); };
+  $('#tok').onkeydown = e=>{ if(e.key==='Enter') $('#go').click(); };
+}
+function render(){
+  $('#app').innerHTML = `
+  <header><h1>MvDK Community — Admin</h1>
+    <span class="stat">${data.users.length} users · ${data.levels.length} levels · ${data.comments.length} comments</span>
+    <span class="right"><button id="refresh">↻ Refresh</button><button id="logout">Logout</button></span></header>
+  <nav>
+    <button data-tab="levels">Levels</button>
+    <button data-tab="comments">Comments</button>
+    <button data-tab="users">Users</button>
+  </nav><main id="list"></main>`;
+  $('#refresh').onclick=load; $('#logout').onclick=()=>{localStorage.removeItem('mvdk_admin_token');renderLogin();};
+  document.querySelectorAll('nav button').forEach(b=>{ b.classList.toggle('active',b.dataset.tab===tab); b.onclick=()=>{tab=b.dataset.tab;render();}; });
+  renderList();
+}
+function renderList(){
+  const el = $('#list'); let h='';
+  if(tab==='levels'){
+    if(!data.levels.length) h='<div class="empty">No levels uploaded yet.</div>';
+    data.levels.forEach(l=>{ h+=`<div class="card ${l.hidden?'hidden-row':''}">
+      <img class="thumb" src="${l.thumbnail||''}" onerror="this.style.visibility='hidden'">
+      <div class="meta click" onclick="openLevel('${l.id}')"><b>${esc(l.title)}</b>${l.official?'<span class="pill official">OFICIAL</span>':''}${l.hidden?'<span class="pill">hidden</span>':''}
+        <small>by ${esc(l.authorName)} · ⭐ ${l.stars} · 🎁 ${l.tips||0} · ⬇ ${l.downloads} · 💬 ${l.comments} · ${dt(l.createdAt)}</small>
+        ${l.params?`<small>${l.params.multiDoor?'multi-door':(l.params.doors||1)+' door'} · meta ${l.params.width}×${l.params.height} · ${esc(l.params.theme||'')}</small>`:''}</div>
+      <div class="acts">
+        <button class="gold ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${l.official?'★ Official':'Make official'}</button>
+        <button onclick="dlLevel('${l.id}')">⬇ Download</button>
+        <button onclick="hideLevel('${l.id}',${!l.hidden})">${l.hidden?'Unhide':'Hide'}</button>
+        <button class="danger" onclick="delLevel('${l.id}')">Delete</button></div></div>`; });
+  } else if(tab==='comments'){
+    if(!data.comments.length) h='<div class="empty">No comments yet.</div>';
+    data.comments.forEach(c=>{ h+=`<div class="card ${c.hidden?'hidden-row':''}">
+      ${c.memo?`<img class="memo" src="${c.memo}" onclick="viewMemo('${c.memo}')">`:(c.stamp?`<span class="pill">🔖 sello</span>`:'')}
+      <div class="meta"><b>${esc(c.userName)}</b>${c.hidden?'<span class="pill">hidden</span>':''}
+        <small>${c.text?esc(c.text):(c.memo?'<i>(dibujo)</i>':(c.stamp?'<i>(sello)</i>':''))}</small><small>on level ${esc(c.levelId)} · ${dt(c.createdAt)}</small></div>
+      <div class="acts"><button onclick="hideComment('${c.id}',${!c.hidden})">${c.hidden?'Unhide':'Hide'}</button>
+        <button class="danger" onclick="delComment('${c.id}')">Delete</button></div></div>`; });
+  } else {
+    if(!data.users.length) h='<div class="empty">No users yet.</div>';
+    data.users.forEach(usr=>{ h+=`<div class="card">
+      <img class="ava" src="${usr.avatar||''}" onerror="this.style.visibility='hidden'">
+      <div class="meta"><b>${esc(usr.name)}</b> ${usr.banned?'<span class="banned">BANNED</span>':''}
+        <small>id ${esc(usr.id)} · joined ${dt(usr.createdAt)}</small></div>
+      <div class="acts"><button onclick="banUser('${usr.id}',${!usr.banned})">${usr.banned?'Unban':'Ban'}</button>
+        <button class="danger" onclick="delUser('${usr.id}')">Delete</button></div></div>`; });
+  }
+  el.innerHTML = h;
+}
+function closeModal(){ $('#modal').innerHTML=''; }
+window.viewMemo = (src)=>{ $('#modal').innerHTML=`<div class="modal-bg" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()"><button class="close" onclick="closeModal()">✕</button><h2>Comentario (dibujo / sello)</h2><img class="preview" style="image-rendering:pixelated" src="${src}"></div></div>`; };
+window.openLevel = async (id)=>{
+  const r = await api('/api/admin/levels/'+id); if(!r.ok){ alert('Error'); return; }
+  const l = await r.json(); const p = l.params||{};
+  const cmts = (l.comments||[]).map(c=>`<div class="cmt">${c.memo?`<img src="${c.memo}" onclick="viewMemo('${c.memo}')">`:(c.stamp?'<span class="pill">🔖</span>':'')}
+    <div><b>${esc(c.userName)}</b> ${c.hidden?'<span class="pill">hidden</span>':''}<br><small>${c.text?esc(c.text):'<i>(dibujo/sello)</i>'} · ${dt(c.createdAt)}</small></div></div>`).join('') || '<small>Sin comentarios.</small>';
+  $('#modal').innerHTML = `<div class="modal-bg" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">
+    <button class="close" onclick="closeModal()">✕</button>
+    <h2>${esc(l.title)} ${l.official?'<span class="pill official">OFICIAL</span>':''}</h2>
+    <small>by ${esc(l.authorName)}</small>
+    ${l.thumbnail?`<img class="preview" src="${l.thumbnail}">`:''}
+    <div class="kv">
+      <span>Comunidad</span><span>${l.official?'Nintendo (oficial)':'Usuarios'} (type ${l.communityType})</span>
+      <span>Puertas</span><span>${p.multiDoor?'Varias puertas (multi-door)':((p.doors||1)+' puerta')}</span>
+      <span>Puntos meta (estrella)</span><span>${p.goalScore!=null?p.goalScore:'—'}</span>
+      <span>Dimensiones</span><span>${p.width?`${p.width} × ${p.height}`:'—'}</span>
+      <span>Tema</span><span>${esc(p.theme||'—')}</span>
+      <span>Estrellas (mola)</span><span>${l.stars}</span>
+      <span>Regalos (estrellas)</span><span>${l.tips||0}</span>
+      <span>Descargas</span><span>${l.downloads||0}</span>
+      <span>Data IDs</span><span>${esc(l.primaryID||'—')}${l.secondaryID?(' / '+esc(l.secondaryID)):''}</span>
+      <span>Publicado</span><span>${dt(l.createdAt)}</span>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <button class="gold ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${l.official?'Quitar oficial':'Marcar oficial'}</button>
+      <button onclick="dlLevel('${l.id}')">⬇ Descargar nivel</button>
+    </div>
+    <h3>Comentarios (${(l.comments||[]).length})</h3>${cmts}
+  </div></div>`;
+};
+window.dlLevel = async (id)=>{
+  const r = await api('/api/admin/levels/'+id+'/download'); if(!r.ok){ alert('Error'); return; }
+  const blob = await r.blob(); const u = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=u; a.download=id+'.mvdklevel.json'; a.click(); URL.revokeObjectURL(u);
+};
+async function act(p,opts){ await api(p,opts); closeModal(); await load(); }
+window.setOfficial=(id,v)=>act(`/api/admin/levels/${id}/official`,{method:'POST',body:JSON.stringify({official:v})});
+window.hideLevel=(id,h)=>act(`/api/admin/levels/${id}/hide`,{method:'POST',body:JSON.stringify({hidden:h})});
+window.delLevel=(id)=>{ if(confirm('Delete this level permanently?')) act(`/api/admin/levels/${id}`,{method:'DELETE'}); };
+window.hideComment=(id,h)=>act(`/api/admin/comments/${id}/hide`,{method:'POST',body:JSON.stringify({hidden:h})});
+window.delComment=(id)=>{ if(confirm('Delete this comment?')) act(`/api/admin/comments/${id}`,{method:'DELETE'}); };
+window.banUser=(id,b)=>act(`/api/admin/users/${id}/ban`,{method:'POST',body:JSON.stringify({banned:b})});
+window.delUser=(id)=>{ if(confirm('Delete this user?')) act(`/api/admin/users/${id}`,{method:'DELETE'}); };
+
+if(token()) load(); else renderLogin();
+</script>
+</body>
+</html>
