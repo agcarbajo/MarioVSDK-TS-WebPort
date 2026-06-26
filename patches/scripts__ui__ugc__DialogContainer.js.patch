@@ -1,0 +1,29 @@
+diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.js
+--- a/scripts/ui/ugc/DialogContainer.js
++++ b/scripts/ui/ugc/DialogContainer.js
+@@ -228,9 +228,22 @@
+ 
+         DialogContainer.prototype._openComment = function (btn) {
+             if (btn.genericButtonAction(false)) {
+-                pt.ugc.disableHBM(pt.ugc.HBMControllerType.CreateComment);
+-                this._gotoCommentSFXId = lib.sound.SoundPlayer.instance.playSFX('MIIVERSE_TAB');
+-                window.blockInput = true;
++                lib.sound.SoundPlayer.instance.playSFX('MIIVERSE_TAB');
++                // The original opened the Wii U Miiverse memo module (absent in
++                // this port). Use the custom native-looking composer instead,
++                // then refresh the comment list with whatever was posted.
++                var postID = ui.ugc.currentPost && ui.ugc.currentPost.postID;
++                if (window.ChromiumPortCommentUI && postID) {
++                    window.ChromiumPortCommentUI.open(postID, function () {
++                        if (ui.ugc.currentPost) {
++                            ui.ugcSignals.clearData.dispatch('comments');
++                            ui.ugcSignals.getComments.dispatch(ui.ugc.activeFilter, ui.ugc.currentPost.dataIndex);
++                        }
++                    });
++                } else {
++                    pt.ugc.disableHBM(pt.ugc.HBMControllerType.CreateComment);
++                    window.blockInput = true;
++                }
+             }
+         };
+ 

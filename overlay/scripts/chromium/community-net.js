@@ -173,10 +173,11 @@
         };
     }
     function stampImageUrl(stamp) {
-        // Stamp ids are stored as the stamp texture key; resolve to its asset URL.
+        // Stamp ids ("d<i>"/"u<i>") resolve to the game's real stamp images via
+        // the shared stamp resolver (decoded from the stamp GTX atlas).
         if (!stamp) return "";
         if (/^(https?:|data:)/.test(stamp)) return stamp;
-        return "img/stamps/" + stamp + ".png";
+        try { return global.ChromiumPortStamps.getImageUrl(stamp) || ""; } catch (e) { return ""; }
     }
     function buildRawPost(l) {
         return {

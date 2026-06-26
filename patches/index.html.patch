@@ -1,5 +1,4 @@
 diff --git a/index.html b/index.html
-index 0c5b9f9..5b82cb7 100644
 --- a/index.html
 +++ b/index.html
 @@ -3,17 +3,42 @@
@@ -183,10 +182,11 @@ index 0c5b9f9..5b82cb7 100644
  			}
  			.ann-box-gp {
  				display: -webkit-box;
-@@ -117,6 +263,51 @@
+@@ -116,6 +262,52 @@
+ 				from {opacity: 1} to {opacity: 0}
  			}*/
  		</style>
- 
++
 +		<script type="text/javascript">
 +			window.__chromiumPortBuild = 'fullscreen-boot-overlay-20260603';
 +			window.__chromiumPortPortVersion = '0.9.5';
@@ -228,14 +228,14 @@ index 0c5b9f9..5b82cb7 100644
 +			document.write('<script type="text/javascript" src="scripts/chromium/view-settings.js?v=' + encodeURIComponent(window.__chromiumPortVersion) + '"><\/script>');
 +			document.write('<script type="text/javascript" src="scripts/chromium/community.js?v=' + encodeURIComponent(window.__chromiumPortVersion) + '"><\/script>');
 +			document.write('<script type="text/javascript" src="scripts/chromium/community-net.js?v=' + encodeURIComponent(window.__chromiumPortVersion) + '"><\/script>');
++			document.write('<script type="text/javascript" src="scripts/chromium/community-comment.js?v=' + encodeURIComponent(window.__chromiumPortVersion) + '"><\/script>');
 +			document.write('<script type="text/javascript" src="scripts/chromium/mobile-pause-button.js?v=' + encodeURIComponent(window.__chromiumPortVersion) + '"><\/script>');
 +			document.write('<script type="text/javascript" src="scripts/chromium/editor-shortcuts.js?v=' + encodeURIComponent(window.__chromiumPortVersion) + '"><\/script>');
 +		</script>
-+
+ 
  		<script type="text/javascript">
  		(function(){
- 			// Set-up the viewport as quick as possible!
-@@ -182,6 +373,27 @@
+@@ -182,6 +374,27 @@
  				for (i = 0; i < els.length; i++) {
  					els[i].innerHTML = str;
  				}
@@ -263,7 +263,7 @@ index 0c5b9f9..5b82cb7 100644
  			}, false);
  			
  		})();
-@@ -193,21 +405,27 @@
+@@ -193,20 +406,26 @@
  	</head>
  	<body>
  		
@@ -301,6 +301,3 @@ index 0c5b9f9..5b82cb7 100644
  		</div>
  		
  	</body>
--</html>
-\ No newline at end of file
-+</html>
