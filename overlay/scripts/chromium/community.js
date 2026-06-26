@@ -90,12 +90,12 @@
         uploadLevel: function (title, data, thumbnail) { return apiFetch("/api/levels", { method: "POST", body: { title: title, data: data, thumbnail: thumbnail } }); },
         starLevel: function (id) { return apiFetch("/api/levels/" + id + "/star", { method: "POST" }); },
         getComments: function (id) { return apiFetch("/api/levels/" + id + "/comments"); },
-        addComment: function (id, text, stamp) { return apiFetch("/api/levels/" + id + "/comments", { method: "POST", body: { text: text, stamp: stamp } }); },
+        addComment: function (id, text, stamp, memo) { return apiFetch("/api/levels/" + id + "/comments", { method: "POST", body: { text: text, stamp: stamp, memo: memo || undefined } }); },
         nativeTip: function (id, amount) { return apiFetch("/api/native/levels/" + id + "/tip", { method: "POST", body: { amount: amount } }); },
         nativeDeletePost: function (id) { return apiFetch("/api/native/levels/" + id, { method: "DELETE" }); },
         // Native FishBowl bridge (opaque binary blobs).
         nativeCreatePost: function (payload) { return apiFetch("/api/native/levels", { method: "POST", body: payload }); },
-        nativePutDatastore: function (dataID, metaBinaryB64) { return apiFetch("/api/native/datastore/" + encodeURIComponent(dataID), { method: "PUT", body: { metaBinary: metaBinaryB64 } }); },
+        nativePutDatastore: function (dataID, metaBinaryB64, params) { return apiFetch("/api/native/datastore/" + encodeURIComponent(dataID), { method: "PUT", body: { metaBinary: metaBinaryB64, params: params || undefined } }); },
         nativeListPosts: function (communityType) { return apiFetch("/api/native/levels?community=" + encodeURIComponent(communityType)); },
         nativeGetDatastore: function (dataID) { return apiFetch("/api/native/datastore/" + encodeURIComponent(dataID)); }
     };

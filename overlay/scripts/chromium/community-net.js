@@ -97,10 +97,11 @@
         var postID = uploadComment && uploadComment.postID;
         var body = (uploadComment && uploadComment.body) || "";
         var stamp = (uploadComment && uploadComment.stamp) || "";
+        var memo = (uploadComment && uploadComment.memo) || "";
         var done = function () { fire(mv, "uploadCommentSuccess", { uploadResult: {} }); };
-        if (postID && (body || stamp) && ready()) {
-            rest().addComment(postID, body, stamp).then(function () { log("comment posted to " + postID); done(); },
-                                                        function (e) { log("comment post failed: " + e.message); done(); });
+        if (postID && (body || stamp || memo) && ready()) {
+            rest().addComment(postID, body, stamp, memo).then(function () { log("comment posted to " + postID); done(); },
+                                                              function (e) { log("comment post failed: " + e.message); done(); });
         } else { done(); }
     };
     mv.uploadComment = mv.sendComment;
@@ -156,14 +157,18 @@
                 var done = function () { try { if (cb) cb(); } catch (e) {} };
                 try {
                     var ctx = canvas && canvas.getContext && canvas.getContext("2d");
-                    if (!ctx || !avatarUrl) { done(); return; }
+                    if (!ctx) { done(); return; }
+                    var drawDefault = function () {
+                        try { ctx.clearRect(0, 0, canvas.width, canvas.height); if (global.__chromiumDrawDefaultAvatar) global.__chromiumDrawDefaultAvatar(ctx, canvas.width, canvas.height); } catch (e) {}
+                    };
+                    if (!avatarUrl) { drawDefault(); done(); return; }
                     var img = new Image();
                     img.crossOrigin = "anonymous";
                     img.onload = function () {
                         try { ctx.clearRect(0, 0, canvas.width, canvas.height); drawCover(ctx, img, canvas.width, canvas.height); } catch (e) {}
                         done();
                     };
-                    img.onerror = done;
+                    img.onerror = function () { drawDefault(); done(); };
                     img.src = avatarUrl;
                 } catch (e) { done(); }
             },
@@ -192,18 +197,24 @@
             replyCount: 0,
             empathyCount: l.stars || 0,
             empathyAdded: !!l.starred,
+            // 3 = official (Nintendo) so the game treats it accordingly; 1 = user.
+            platformType: l.official ? 3 : 1,
             hasBodyText: !!l.body,
             body: l.body || "",
             hasMemo: false,
             renderMemo: function () {},
             thumbnailSnapshot: l.screenshot ? b64ToBlob(l.screenshot) : null,
-            platformType: 0,
             tested: true,
             shared: true
         };
     }
     function buildRawComment(c) {
-        var stampUrl = c.stamp ? stampImageUrl(c.stamp) : "";
+        // Preferred: a hand-drawn memo (320x120) that already composes freehand
+        // strokes + freely-placed stamps -> draw it filling the memo canvas.
+        // Legacy: a single stamp -> draw it small and centred (never full-bleed).
+        var memoUrl = c.memo ? avatarFullUrl(c.memo) : "";
+        var stampUrl = (!memoUrl && c.stamp) ? stampImageUrl(c.stamp) : "";
+        var hasMemo = !!(memoUrl || stampUrl);
         return {
             id: c.id,
             appData: null,
@@ -215,18 +226,22 @@
             dateCreated: new Date(c.createdAt || Date.now()),
             hasBodyText: !!c.text,
             body: c.text || "",
-            hasMemo: !!stampUrl,
+            hasMemo: hasMemo,
             renderMemo: function (target) {
-                if (!stampUrl) return;
+                if (!hasMemo) return;
                 try {
-                    var ctx = target && target.getContext ? target.getContext("2d") : (target && target.canvas ? target : null);
-                    if (target && target.getContext) ctx = target.getContext("2d");
-                    else if (target && target.drawImage) ctx = target;
+                    var ctx = (target && target.getContext) ? target.getContext("2d") : (target && target.drawImage ? target : null);
                     if (!ctx) return;
-                    var cw = (ctx.canvas && ctx.canvas.width) || 128, ch = (ctx.canvas && ctx.canvas.height) || 128;
+                    var cw = (ctx.canvas && ctx.canvas.width) || 320, ch = (ctx.canvas && ctx.canvas.height) || 120;
                     var img = new Image(); img.crossOrigin = "anonymous";
-                    img.onload = function () { try { ctx.clearRect(0, 0, cw, ch); ctx.drawImage(img, 0, 0, cw, ch); } catch (e) {} };
-                    img.src = stampUrl;
+                    img.onload = function () {
+                        try {
+                            ctx.clearRect(0, 0, cw, ch);
+                            if (memoUrl) { ctx.drawImage(img, 0, 0, cw, ch); }
+                            else { var s = Math.min(ch, cw) * 0.7; ctx.drawImage(img, (cw - s) / 2, (ch - s) / 2, s, s); }
+                        } catch (e) {}
+                    };
+                    img.src = memoUrl || stampUrl;
                 } catch (e) {}
             },
             isSpoiler: false,
@@ -237,6 +252,37 @@
         return rest().nativeGetDatastore(dataID).then(function (r) {
             return { dataID: dataID, metaBinary: b64ToBlob(r.metaBinary) };
         }).catch(function () { return null; });
+    }
+
+    // Parse the level's map params from a metaBinary blob (DataStoreLevelInfo
+    // header + map binary) so the server/admin can show level details. Returns a
+    // Promise resolving to params or null (never rejects).
+    function parseLevelParams(metaBinary) {
+        return new Promise(function (resolve) {
+            if (!metaBinary || !metaBinary.arrayBuffer) { resolve(null); return; }
+            metaBinary.arrayBuffer().then(function (ab) {
+                try {
+                    var reader = new lib.util.DataReader(ab);
+                    reader.moveOffset(pt.ugc.DATASTORE_LEVEL_INFO_SIZE);
+                    var conv = new pt.map.MapBinaryConverter();
+                    conv.validateChecksum(reader);
+                    var mapDef = conv.toMapDef(reader);
+                    if (!mapDef || !mapDef.header) { resolve(null); return; }
+                    var doors = (mapDef.entities || []).filter(function (e) { return e && e.type === "Door"; }).length;
+                    var multi = false;
+                    try { multi = !!pt.map.checkIsMultiDoorLevel(mapDef); } catch (e) {}
+                    resolve({
+                        name: mapDef.header.name || "",
+                        width: mapDef.header.width || 0,
+                        height: mapDef.header.height || 0,
+                        theme: (mapDef.settings && mapDef.settings.theme) || "",
+                        goalScore: (mapDef.settings && mapDef.settings.goalScore) || 0,
+                        doors: doors,
+                        multiDoor: multi
+                    });
+                } catch (e) { resolve(null); }
+            }, function () { resolve(null); });
+        });
     }
 
     function communityIdToType(communityID) {
@@ -324,10 +370,12 @@
     // this just reports success to satisfy the native withdraw flow.
     ds.deleteData = function (dataID) { fire(ds, "deleteDataSuccess", { dataID: dataID }); return 0; };
     ds.updateData = function (dataID, updateObject) {
-        blobToB64(updateObject && updateObject.metaBinary).then(function (b64) {
+        var metaBinary = updateObject && updateObject.metaBinary;
+        Promise.all([blobToB64(metaBinary), parseLevelParams(metaBinary)]).then(function (r) {
+            var b64 = r[0], params = r[1];
             var done = function () { fire(ds, "updateDataSuccess", { dataID: dataID }); };
             if (b64 && ready()) {
-                rest().nativePutDatastore(dataID, b64).then(done, function (e) { log("datastore put failed: " + e.message); done(); });
+                rest().nativePutDatastore(dataID, b64, params).then(done, function (e) { log("datastore put failed: " + e.message); done(); });
             } else { done(); }
         });
         return 0;

@@ -653,6 +653,20 @@
 
     var nextOfflineDataID = 100000;
 
+    // Draws a generic "unregistered user" avatar (Miiverse-style grey silhouette)
+    // into a canvas. Shared default when no profile photo is available.
+    function drawDefaultAvatar(ctx, w, h) {
+        ctx.save();
+        var g = ctx.createLinearGradient(0, 0, 0, h);
+        g.addColorStop(0, "#aac4e0"); g.addColorStop(1, "#8aa6c6");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "#eef3fa";
+        ctx.beginPath(); ctx.arc(w / 2, h * 0.40, w * 0.19, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath(); ctx.arc(w / 2, h * 1.02, w * 0.36, Math.PI, 0); ctx.fill();
+        ctx.restore();
+    }
+    global.__chromiumDrawDefaultAvatar = drawDefaultAvatar;
+
     function makeOfflineMii(name) {
         return {
             name: name || "Chromium",
@@ -663,6 +677,16 @@
                     bytes[i] = text.charCodeAt(i) & 0xff;
                 }
                 return bytes.buffer;
+            },
+            // The game renders Mii icons into a canvas; with no real Mii service
+            // here, paint the default user avatar so the icon slot is never empty
+            // and never throws (LocalDataProvider, profiles, etc.).
+            renderIcon: function (canvas, cb) {
+                try {
+                    var ctx = canvas && canvas.getContext && canvas.getContext("2d");
+                    if (ctx) { ctx.clearRect(0, 0, canvas.width, canvas.height); drawDefaultAvatar(ctx, canvas.width, canvas.height); }
+                } catch (e) {}
+                if (cb) try { cb(); } catch (e) {}
             },
             setExpression: function () {},
             getImage: function () { return null; }
