@@ -253,9 +253,14 @@
         }
         function up() { drawing = false; last = null; }
         canvas.addEventListener("mousedown", down); canvas.addEventListener("mousemove", move);
-        global.document.addEventListener("mouseup", up);
+        // The overlay stops mouseup from bubbling to document, so release must be
+        // caught on the overlay itself (and on leaving the canvas) - otherwise the
+        // pen keeps "drawing" on hover after the button is released.
+        overlay.addEventListener("mouseup", up);
+        overlay.addEventListener("mouseleave", up);
+        canvas.addEventListener("mouseleave", up);
         canvas.addEventListener("touchstart", down); canvas.addEventListener("touchmove", move);
-        canvas.addEventListener("touchend", up);
+        canvas.addEventListener("touchend", up); canvas.addEventListener("touchcancel", up);
 
         q('[data-act="cancel"]').onclick = function () { close(); };
         overlay.querySelector(".cwc-x").onclick = function () { close(); };

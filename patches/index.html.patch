@@ -189,7 +189,7 @@ diff --git a/index.html b/index.html
 +
 +		<script type="text/javascript">
 +			window.__chromiumPortBuild = 'fullscreen-boot-overlay-20260603';
-+			window.__chromiumPortPortVersion = '0.9.5';
++			window.__chromiumPortPortVersion = '1.0.0 beta 1';
 +			window.__chromiumPortVersion = ((new URLSearchParams(window.location.search).get('v') || 'stable') + '-' + window.__chromiumPortBuild);
 +			window.__chromiumPortSimpleBackgrounds = true;
 +			window.__chromiumPortLoadTvAssets = (function () {
