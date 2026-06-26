@@ -27,3 +27,24 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
              }
          };
  
+@@ -429,6 +442,20 @@
+             }
+ 
+             this._commentPosY = this._gpComments[this._gpComments.length - 1].refreshMain(post);
++
++            // Refresh the mola (empathy) / star counts from the server so a
++            // creator sees what other players gave them, even from the workshop
++            // self-view where only local counts are otherwise known.
++            if (post.postID && window.ChromiumPortCommunity && window.ChromiumPortCommunity.isReady()) {
++                var self = this;
++                window.ChromiumPortCommunity.rest.nativeGetLevel(post.postID).then(function (info) {
++                    if (!info) return;
++                    try { pt.ugc.ugcHistory.setLevelYeahCount(post.postID, info.stars); } catch (e) {}
++                    post.empathyCount = info.stars;
++                    try { self._layoutTVPanes.lvldeet_yeahs.setText(info.stars); } catch (e) {}
++                    try { self._layoutGPPanes.lvldeet_yeahs.setText(info.stars); } catch (e) {}
++                }).catch(function () {});
++            }
+ 
+             btn = this._gpComments[this._gpComments.length - 1].btn;
+             if (!ui.ugc.offlineMode && (post.platformType !== pt.ugc.OFFICIAL_PLATFORM_TYPE)) {

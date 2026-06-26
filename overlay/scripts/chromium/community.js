@@ -97,7 +97,8 @@
         nativeCreatePost: function (payload) { return apiFetch("/api/native/levels", { method: "POST", body: payload }); },
         nativePutDatastore: function (dataID, metaBinaryB64, params) { return apiFetch("/api/native/datastore/" + encodeURIComponent(dataID), { method: "PUT", body: { metaBinary: metaBinaryB64, params: params || undefined } }); },
         nativeListPosts: function (communityType) { return apiFetch("/api/native/levels?community=" + encodeURIComponent(communityType)); },
-        nativeGetDatastore: function (dataID) { return apiFetch("/api/native/datastore/" + encodeURIComponent(dataID)); }
+        nativeGetDatastore: function (dataID) { return apiFetch("/api/native/datastore/" + encodeURIComponent(dataID)); },
+        nativeGetLevel: function (id) { return apiFetch("/api/native/levels/" + encodeURIComponent(id)); }
     };
 
     // ------------------------------------------------ image downscaling ----
