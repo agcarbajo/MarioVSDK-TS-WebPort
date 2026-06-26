@@ -18,3 +18,18 @@ diff --git a/scripts/ui/ugc/FishBowlGlobal.js b/scripts/ui/ugc/FishBowlGlobal.js
              reserveAnimatedTiles(pt.asset.assetDefLoader.getMapAssets(), sharedActorManager, pt.editor.ThemeData[0].theme);
  
              ugc.comments = [];
+@@ -237,6 +247,14 @@
+             ugc.ownProfile.regionID = nwf.system.WiiUSystem.getInstance().regionCode;
+             ugc.ownProfile.principalID = activeAccount.principalID;
+             ugc.ownProfile.mii = activeAccount.mii;
++            // Show the community profile photo + chosen name in the Mii slot.
++            try {
++                if (window.ChromiumPortCommunity && window.ChromiumPortCommunity.hasProfile &&
++                    window.ChromiumPortCommunity.hasProfile() && window.ChromiumPortCommunityNet) {
++                    var cprof = window.ChromiumPortCommunity.getProfile();
++                    ugc.ownProfile.mii = window.ChromiumPortCommunityNet.makeAvatarMii(cprof.name, cprof.avatar);
++                }
++            } catch (e) {}
+             ugc.ownProfile.generateIcon();
+             ugc.currentRegionID = nwf.system.WiiUSystem.getInstance().regionCode;
+             ugc.currentPrincipalID = activeAccount.principalID;

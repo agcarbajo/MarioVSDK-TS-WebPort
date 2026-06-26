@@ -96,10 +96,11 @@
     mv.sendComment = function (uploadComment) {
         var postID = uploadComment && uploadComment.postID;
         var body = (uploadComment && uploadComment.body) || "";
+        var stamp = (uploadComment && uploadComment.stamp) || "";
         var done = function () { fire(mv, "uploadCommentSuccess", { uploadResult: {} }); };
-        if (postID && body && ready()) {
-            rest().addComment(postID, body).then(function () { log("comment posted to " + postID); done(); },
-                                                 function (e) { log("comment post failed: " + e.message); done(); });
+        if (postID && (body || stamp) && ready()) {
+            rest().addComment(postID, body, stamp).then(function () { log("comment posted to " + postID); done(); },
+                                                        function (e) { log("comment post failed: " + e.message); done(); });
         } else { done(); }
     };
     mv.uploadComment = mv.sendComment;
@@ -130,12 +131,59 @@
         return h || 1;
     }
     function getMii() { try { return nwf.act.Mii.getMyMii(); } catch (e) { return null; } }
+
+    function serverBase() {
+        try { return (global.ChromiumPortCommunity.getProfile().server || "").replace(/\/+$/, ""); } catch (e) { return ""; }
+    }
+    function avatarFullUrl(rel) {
+        if (!rel) return "";
+        if (/^(https?:|data:)/.test(rel)) return rel;
+        return serverBase() + rel;
+    }
+    function drawCover(ctx, img, w, h) {
+        var ir = img.width / img.height, cr = w / h, sw, sh, sx, sy;
+        if (ir > cr) { sh = img.height; sw = sh * cr; sx = (img.width - sw) / 2; sy = 0; }
+        else { sw = img.width; sh = sw / cr; sx = 0; sy = (img.height - sh) / 2; }
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, w, h);
+    }
+    // A Mii stand-in that paints the account's custom profile photo into the
+    // slot the Wii U would have rendered the Mii face. Falls back to drawing
+    // nothing (transparent) when no avatar was chosen.
+    function makeAvatarMii(name, avatarUrl) {
+        return {
+            name: name || "Player",
+            renderIcon: function (canvas, cb, options) {
+                var done = function () { try { if (cb) cb(); } catch (e) {} };
+                try {
+                    var ctx = canvas && canvas.getContext && canvas.getContext("2d");
+                    if (!ctx || !avatarUrl) { done(); return; }
+                    var img = new Image();
+                    img.crossOrigin = "anonymous";
+                    img.onload = function () {
+                        try { ctx.clearRect(0, 0, canvas.width, canvas.height); drawCover(ctx, img, canvas.width, canvas.height); } catch (e) {}
+                        done();
+                    };
+                    img.onerror = done;
+                    img.src = avatarUrl;
+                } catch (e) { done(); }
+            },
+            setExpression: function () {},
+            serialize: function () { return new ArrayBuffer(96); },
+            getImage: function () { return null; }
+        };
+    }
+    function stampImageUrl(stamp) {
+        // Stamp ids are stored as the stamp texture key; resolve to its asset URL.
+        if (!stamp) return "";
+        if (/^(https?:|data:)/.test(stamp)) return stamp;
+        return "img/stamps/" + stamp + ".png";
+    }
     function buildRawPost(l) {
         return {
             id: l.id,
             appData: b64ToBlob(l.appData),
             miiName: l.authorName || "Player",
-            mii: getMii(),
+            mii: makeAvatarMii(l.authorName, avatarFullUrl(l.authorAvatar)),
             miiExpression: 0,
             posterID: numHash(l.authorId),
             regionID: 0,
@@ -154,19 +202,32 @@
         };
     }
     function buildRawComment(c) {
+        var stampUrl = c.stamp ? stampImageUrl(c.stamp) : "";
         return {
             id: c.id,
             appData: null,
             miiName: c.userName || "Player",
-            mii: getMii(),
+            mii: makeAvatarMii(c.userName, avatarFullUrl(c.userAvatar)),
             miiExpression: 0,
             posterID: numHash(c.userId),
             regionID: 0,
             dateCreated: new Date(c.createdAt || Date.now()),
             hasBodyText: !!c.text,
             body: c.text || "",
-            hasMemo: false,
-            renderMemo: function () {},
+            hasMemo: !!stampUrl,
+            renderMemo: function (target) {
+                if (!stampUrl) return;
+                try {
+                    var ctx = target && target.getContext ? target.getContext("2d") : (target && target.canvas ? target : null);
+                    if (target && target.getContext) ctx = target.getContext("2d");
+                    else if (target && target.drawImage) ctx = target;
+                    if (!ctx) return;
+                    var cw = (ctx.canvas && ctx.canvas.width) || 128, ch = (ctx.canvas && ctx.canvas.height) || 128;
+                    var img = new Image(); img.crossOrigin = "anonymous";
+                    img.onload = function () { try { ctx.clearRect(0, 0, cw, ch); ctx.drawImage(img, 0, 0, cw, ch); } catch (e) {} };
+                    img.src = stampUrl;
+                } catch (e) {}
+            },
             isSpoiler: false,
             platformType: 0
         };
@@ -230,6 +291,17 @@
     };
     mv.uploadPost = mv.sendPost;
 
+    // Withdraw a published level. The backend DELETE removes the post, its
+    // appData/thumbnail and the DataStore object(s) in one call, so deletePost
+    // does the work and the DataStore deleteData calls just succeed.
+    mv.deletePost = function (postID) {
+        var done = function () { fire(mv, "deletePostSuccess", { postID: postID }); };
+        if (postID && ready()) {
+            rest().nativeDeletePost(postID).then(function () { log("post withdrawn: " + postID); done(); },
+                                                 function (e) { log("withdraw failed: " + e.message); done(); });
+        } else { done(); }
+    };
+
     // ---- DataStore (NEX) service ----
     var ds = nwf.nex.DataStore.getInstance();
     ds.isLoggedIn = true;
@@ -247,6 +319,9 @@
         return 0;
     };
     ds.completeSuspendedData = function () { fire(ds, "completeSuspendedObjectSuccess"); return 0; };
+    // The level's DataStore object is removed by the backend post-delete, so
+    // this just reports success to satisfy the native withdraw flow.
+    ds.deleteData = function (dataID) { fire(ds, "deleteDataSuccess", { dataID: dataID }); return 0; };
     ds.updateData = function (dataID, updateObject) {
         blobToB64(updateObject && updateObject.metaBinary).then(function (b64) {
             var done = function () { fire(ds, "updateDataSuccess", { dataID: dataID }); };
@@ -270,6 +345,13 @@
             fire(ds, "downloadBatchDataSuccess", { batchResults: objs.filter(Boolean) });
         });
         return 0;
+    };
+
+    // Exposed so the native UI (e.g. FishBowlGlobal own-profile setup) can build
+    // the same avatar-backed Mii stand-in for the local player.
+    global.ChromiumPortCommunityNet = {
+        makeAvatarMii: makeAvatarMii,
+        avatarFullUrl: avatarFullUrl
     };
 
     log("native community bridge installed (communities + native upload -> server)");
