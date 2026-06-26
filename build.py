@@ -488,13 +488,13 @@ def main():
                     help="Path to your original game files (dump root or app folder).")
     ap.add_argument("--out", default=str(REPO / "build" / "chromium-port"),
                     help="Output folder for the built port (default: build/chromium-port).")
-    ap.add_argument("--package", nargs="?", const="electron",
-                    choices=["electron", "webview"], default=None,
+    ap.add_argument("--package", nargs="?", const="webview",
+                    choices=["webview", "electron"], default=None,
                     help="After building, also package a standalone desktop app "
                          "(an executable + a folder of files) for the current OS. "
-                         "'electron' (default) bundles its own Chromium for a fully "
-                         "self-contained app; 'webview' makes a lighter app that uses "
-                         "the OS webview / browser.")
+                         "'webview' (default) makes a lighter app that uses the OS "
+                         "webview / browser; 'electron' bundles its own Chromium for "
+                         "a fully self-contained app.")
     ap.add_argument("--app-name", default="MvDK-Tipping-Stars",
                     help="Name for the packaged app/executable (default: MvDK-Tipping-Stars).")
     args = ap.parse_args()
@@ -552,7 +552,8 @@ def main():
         info("Serve it over HTTP (NOT file://), for example:")
         info('    python -m http.server 8765 --bind 127.0.0.1 --directory "%s"' % out)
         info("Then open http://127.0.0.1:8765/")
-        info("Or run `python build.py ... --package` for a self-contained desktop app.")
+        info("Or run `python build.py ... --package` for a desktop app (WebView by "
+             "default; add `--package electron` for a self-contained Chromium build).")
 
 
 if __name__ == "__main__":

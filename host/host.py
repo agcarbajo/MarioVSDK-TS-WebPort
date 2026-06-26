@@ -23,6 +23,17 @@ import socketserver
 import sys
 import threading
 
+# When frozen by PyInstaller as a windowed app there is no console, so
+# sys.stdout / sys.stderr are None and any print()/.flush() would raise
+# "AttributeError: 'NoneType' object has no attribute 'flush'". Route them to a
+# null stream so the host runs the same with or without a console.
+for _name in ("stdout", "stderr"):
+    if getattr(sys, _name, None) is None:
+        try:
+            setattr(sys, _name, open(os.devnull, "w"))
+        except Exception:
+            pass
+
 APP_TITLE = "Mario vs. Donkey Kong: Tipping Stars"
 WINDOW_W = 960
 WINDOW_H = 600
