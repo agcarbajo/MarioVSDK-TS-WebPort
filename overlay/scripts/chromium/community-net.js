@@ -69,17 +69,87 @@
     mv.getPostList = function () { fire(mv, "downloadPostSuccess", { posts: [] }); };
     mv.getCommentList = function () { fire(mv, "downloadCommentSuccess", { comments: [] }); };
 
+    function communityIdToType(communityID) {
+        // MiiverseCommunityType enum: UserLevels=0, NintendoLevels=1
+        return communityID === "nintendo-levels" ? 1 : 0;
+    }
+
+    function blobToB64(blob) {
+        return new Promise(function (resolve) {
+            if (!blob) { resolve(""); return; }
+            if (blob instanceof ArrayBuffer) blob = new Blob([blob]);
+            try {
+                var fr = new FileReader();
+                fr.onload = function () { var s = String(fr.result || ""); var i = s.indexOf(","); resolve(i >= 0 ? s.slice(i + 1) : ""); };
+                fr.onerror = function () { resolve(""); };
+                fr.readAsDataURL(blob);
+            } catch (e) { resolve(""); }
+        });
+    }
+
+    function ready() { return global.ChromiumPortCommunity && global.ChromiumPortCommunity.isReady(); }
+    function rest() { return global.ChromiumPortCommunity.rest; }
+
+    // ---- Native level publishing: capture the game's upload and store it ----
+    var pendingDataIDs = [];
+    var dsSeq = 0, postSeq = 0;
+
+    // Miiverse "send post": carries the post appData (encodes the DataStore IDs),
+    // body, screenshot and community. Store the post; the level binary follows
+    // via DataStore updateData below.
+    mv.sendPost = function (uploadPost) {
+        var postID = "post-" + (++postSeq) + "-" + Date.now();
+        var dataIDs = pendingDataIDs.slice();
+        pendingDataIDs = [];
+        Promise.all([
+            blobToB64(uploadPost && uploadPost.appData),
+            blobToB64(uploadPost && uploadPost.screenshot)
+        ]).then(function (r) {
+            if (ready()) {
+                rest().nativeCreatePost({
+                    postID: postID,
+                    title: (uploadPost && uploadPost.body) || "Nivel",
+                    body: (uploadPost && uploadPost.body) || "",
+                    communityType: communityIdToType(uploadPost && uploadPost.communityID),
+                    appData: r[0], screenshot: r[1],
+                    primaryID: dataIDs[0] || "", secondaryID: dataIDs[1] || ""
+                }).then(function () { log("level uploaded to server: " + postID); })
+                  .catch(function (e) { log("native post upload failed: " + e.message); });
+            }
+            fire(mv, "uploadPostSuccess", { postID: postID, uploadResult: {} });
+        });
+        return 0;
+    };
+    mv.uploadPost = mv.sendPost;
+
     // ---- DataStore (NEX) service ----
     var ds = nwf.nex.DataStore.getInstance();
     ds.isLoggedIn = true;
     ds.isBound = true;
-    if (typeof ds.login === "function") {
-        var origLogin = ds.login.bind(ds);
-        ds.login = function () { ds.isLoggedIn = true; fire(ds, "loginSuccess"); return 0; };
-    }
-    // The base stub fails search; make it succeed empty so the community opens.
-    ds.search = function () { fire(ds, "searchSuccess", { result: [], data: [] }); };
-    ds.searchData = function () { fire(ds, "searchDataSuccess", { result: [], data: [] }); };
+    ds.login = function () { ds.isLoggedIn = true; fire(ds, "loginSuccess"); return 0; };
+    ds.bind = function () { ds.isBound = true; return true; };
 
-    log("native community bridge installed (step 1: communities + empty posts)");
+    ds.uploadData = function () {
+        var dataID = "ds" + (++dsSeq) + "-" + Date.now();
+        pendingDataIDs.push(dataID);
+        fire(ds, "uploadDataSuccess", { dataID: dataID });
+        return 0;
+    };
+    ds.completeSuspendedData = function () { fire(ds, "completeSuspendedObjectSuccess"); return 0; };
+    ds.updateData = function (dataID, updateObject) {
+        blobToB64(updateObject && updateObject.metaBinary).then(function (b64) {
+            if (b64 && ready()) {
+                rest().nativePutDatastore(dataID, b64).catch(function (e) { log("datastore put failed: " + e.message); });
+            }
+            fire(ds, "updateDataSuccess", { dataID: dataID });
+        });
+        return 0;
+    };
+    // Empty browse for now (step: native browse will fill these from the server).
+    ds.dataSearch = function () { fire(ds, "searchSuccess", { results: [], data: [] }); return 0; };
+    ds.downloadData = function () { fire(ds, "downloadDataSuccess", { data: null }); return 0; };
+    ds.downloadBatchData = function () { fire(ds, "downloadBatchDataSuccess", { batchResults: [] }); return 0; };
+    ds.search = function () { fire(ds, "searchSuccess", { results: [], data: [] }); };
+
+    log("native community bridge installed (communities + native upload -> server)");
 }(window));

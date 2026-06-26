@@ -90,7 +90,12 @@
         uploadLevel: function (title, data, thumbnail) { return apiFetch("/api/levels", { method: "POST", body: { title: title, data: data, thumbnail: thumbnail } }); },
         starLevel: function (id) { return apiFetch("/api/levels/" + id + "/star", { method: "POST" }); },
         getComments: function (id) { return apiFetch("/api/levels/" + id + "/comments"); },
-        addComment: function (id, text) { return apiFetch("/api/levels/" + id + "/comments", { method: "POST", body: { text: text } }); }
+        addComment: function (id, text) { return apiFetch("/api/levels/" + id + "/comments", { method: "POST", body: { text: text } }); },
+        // Native FishBowl bridge (opaque binary blobs).
+        nativeCreatePost: function (payload) { return apiFetch("/api/native/levels", { method: "POST", body: payload }); },
+        nativePutDatastore: function (dataID, metaBinaryB64) { return apiFetch("/api/native/datastore/" + encodeURIComponent(dataID), { method: "PUT", body: { metaBinary: metaBinaryB64 } }); },
+        nativeListPosts: function (communityType) { return apiFetch("/api/native/levels?community=" + encodeURIComponent(communityType)); },
+        nativeGetDatastore: function (dataID) { return apiFetch("/api/native/datastore/" + encodeURIComponent(dataID)); }
     };
 
     // ------------------------------------------------ image downscaling ----
