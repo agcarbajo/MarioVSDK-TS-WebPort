@@ -65,9 +65,60 @@
 
     mv.downloadUserData = function () { fire(mv, "downloadUserDataListSuccess", { users: [] }); };
 
-    // Posts / comments: empty for now (native shows the "no levels" state).
-    mv.getPostList = function () { fire(mv, "downloadPostSuccess", { posts: [] }); };
+    // Posts: served from the backend so they appear in the native FishBowl.
+    mv.getPostList = function () {
+        if (!ready()) { fire(mv, "downloadPostSuccess", { posts: [] }); return; }
+        rest().nativeListPosts(0).then(function (r) {
+            var posts = (r.levels || []).map(buildRawPost);
+            log("getPostList -> " + posts.length + " post(s) from server");
+            fire(mv, "downloadPostSuccess", { posts: posts });
+        }).catch(function (e) {
+            log("getPostList failed: " + e.message);
+            fire(mv, "downloadPostSuccess", { posts: [] });
+        });
+    };
     mv.getCommentList = function () { fire(mv, "downloadCommentSuccess", { comments: [] }); };
+
+    function b64ToBlob(b64) {
+        if (!b64) return new Blob([]);
+        var bin = atob(b64), len = bin.length, arr = new Uint8Array(len);
+        for (var i = 0; i < len; ++i) arr[i] = bin.charCodeAt(i);
+        return new Blob([arr]);
+    }
+    function numHash(s) {
+        var h = 0; s = String(s || "");
+        for (var i = 0; i < s.length; ++i) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+        return h || 1;
+    }
+    function getMii() { try { return nwf.act.Mii.getMyMii(); } catch (e) { return null; } }
+    function buildRawPost(l) {
+        return {
+            id: l.id,
+            appData: b64ToBlob(l.appData),
+            miiName: l.authorName || "Player",
+            mii: getMii(),
+            miiExpression: 0,
+            posterID: numHash(l.authorId),
+            regionID: 0,
+            dateCreated: new Date(l.createdAt || Date.now()),
+            replyCount: 0,
+            empathyCount: l.stars || 0,
+            empathyAdded: false,
+            hasBodyText: !!l.body,
+            body: l.body || "",
+            hasMemo: false,
+            renderMemo: function () {},
+            thumbnailSnapshot: l.screenshot ? b64ToBlob(l.screenshot) : null,
+            platformType: 0,
+            tested: true,
+            shared: true
+        };
+    }
+    function fetchDataStore(dataID) {
+        return rest().nativeGetDatastore(dataID).then(function (r) {
+            return { dataID: dataID, metaBinary: b64ToBlob(r.metaBinary) };
+        }).catch(function () { return null; });
+    }
 
     function communityIdToType(communityID) {
         // MiiverseCommunityType enum: UserLevels=0, NintendoLevels=1
@@ -105,6 +156,7 @@
             blobToB64(uploadPost && uploadPost.appData),
             blobToB64(uploadPost && uploadPost.screenshot)
         ]).then(function (r) {
+            var done = function () { fire(mv, "uploadPostSuccess", { postID: postID, uploadResult: {} }); };
             if (ready()) {
                 rest().nativeCreatePost({
                     postID: postID,
@@ -113,10 +165,9 @@
                     communityType: communityIdToType(uploadPost && uploadPost.communityID),
                     appData: r[0], screenshot: r[1],
                     primaryID: dataIDs[0] || "", secondaryID: dataIDs[1] || ""
-                }).then(function () { log("level uploaded to server: " + postID); })
-                  .catch(function (e) { log("native post upload failed: " + e.message); });
-            }
-            fire(mv, "uploadPostSuccess", { postID: postID, uploadResult: {} });
+                }).then(function () { log("level uploaded to server: " + postID); done(); },
+                         function (e) { log("native post upload failed: " + e.message); done(); });
+            } else { done(); }
         });
         return 0;
     };
@@ -130,7 +181,10 @@
     ds.bind = function () { ds.isBound = true; return true; };
 
     ds.uploadData = function () {
-        var dataID = "ds" + (++dsSeq) + "-" + Date.now();
+        // DataStore IDs are encoded as U64 hex strings inside the post appData,
+        // so use an uppercase hex id (<= 8 digits, no leading zeros) that
+        // round-trips exactly through writeU64/readU64.
+        var dataID = (1 + Math.floor(Math.random() * 0xFFFFFFFE)).toString(16).toUpperCase();
         pendingDataIDs.push(dataID);
         fire(ds, "uploadDataSuccess", { dataID: dataID });
         return 0;
@@ -138,18 +192,28 @@
     ds.completeSuspendedData = function () { fire(ds, "completeSuspendedObjectSuccess"); return 0; };
     ds.updateData = function (dataID, updateObject) {
         blobToB64(updateObject && updateObject.metaBinary).then(function (b64) {
+            var done = function () { fire(ds, "updateDataSuccess", { dataID: dataID }); };
             if (b64 && ready()) {
-                rest().nativePutDatastore(dataID, b64).catch(function (e) { log("datastore put failed: " + e.message); });
-            }
-            fire(ds, "updateDataSuccess", { dataID: dataID });
+                rest().nativePutDatastore(dataID, b64).then(done, function (e) { log("datastore put failed: " + e.message); done(); });
+            } else { done(); }
         });
         return 0;
     };
-    // Empty browse for now (step: native browse will fill these from the server).
+    // Level data is fetched from the backend by data id (extracted by the game
+    // from each post's appData).
     ds.dataSearch = function () { fire(ds, "searchSuccess", { results: [], data: [] }); return 0; };
-    ds.downloadData = function () { fire(ds, "downloadDataSuccess", { data: null }); return 0; };
-    ds.downloadBatchData = function () { fire(ds, "downloadBatchDataSuccess", { batchResults: [] }); return 0; };
-    ds.search = function () { fire(ds, "searchSuccess", { results: [], data: [] }); };
+    ds.search = function () { fire(ds, "searchSuccess", { results: [], data: [] }); return 0; };
+    ds.downloadData = function (dataID) {
+        fetchDataStore(dataID).then(function (obj) { fire(ds, "downloadDataSuccess", { data: obj }); });
+        return 0;
+    };
+    ds.downloadBatchData = function (dataIDs) {
+        var ids = [].concat(dataIDs || []);
+        Promise.all(ids.map(fetchDataStore)).then(function (objs) {
+            fire(ds, "downloadBatchDataSuccess", { batchResults: objs.filter(Boolean) });
+        });
+        return 0;
+    };
 
     log("native community bridge installed (communities + native upload -> server)");
 }(window));
