@@ -1,0 +1,20 @@
+diff --git a/scripts/ui/ugc/FishBowlGlobal.js b/scripts/ui/ugc/FishBowlGlobal.js
+--- a/scripts/ui/ugc/FishBowlGlobal.js
++++ b/scripts/ui/ugc/FishBowlGlobal.js
+@@ -220,6 +220,16 @@
+             ugc.snapshotBuilder = new pt.snapshot.SnapshotBuilder(sharedActorManager, true);
+             ugc.snapshotBuilder.init(pt.asset.assetDefLoader.getMapAssets());
+ 
++            // Community/workshop levels can use any theme, so every theme must be
++            // resident before thumbnails are rendered. The chromium boot path only
++            // preloads global tiles (deferring themes to keep solo boot fast), so
++            // request all themes here when entering the FishBowl. Without this an
++            // arbitrary user level's theme is missing and the snapshot map build
++            // hits a null theme (Map.getTileDataByType).
++            if (pt.asset.preloadAllThemeData && pt.asset.assetDefLoader.areAssetDefFilesLoaded()) {
++                pt.asset.preloadAllThemeData();
++            }
++
+             reserveAnimatedTiles(pt.asset.assetDefLoader.getMapAssets(), sharedActorManager, pt.editor.ThemeData[0].theme);
+ 
+             ugc.comments = [];

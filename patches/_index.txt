@@ -30,6 +30,7 @@ scripts__pt__map__AssetDefLoader.js.patch  ->  scripts/pt/map/AssetDefLoader.js
 scripts__pt__map__MapLoader.js.patch  ->  scripts/pt/map/MapLoader.js
 scripts__pt__map__tile__GroundTile.js.patch  ->  scripts/pt/map/tile/GroundTile.js
 scripts__pt__map__tile__MagnetTile.js.patch  ->  scripts/pt/map/tile/MagnetTile.js
+scripts__pt__ugc__dataproviders__LocalDataProvider.js.patch  ->  scripts/pt/ugc/dataproviders/LocalDataProvider.js
 scripts__pt__ugc__sequences__SyncCommunitySequence.js.patch  ->  scripts/pt/ugc/sequences/SyncCommunitySequence.js
 scripts__ui__GameUI.js.patch  ->  scripts/ui/GameUI.js
 scripts__ui__LoadingScreen.js.patch  ->  scripts/ui/LoadingScreen.js
@@ -45,6 +46,7 @@ scripts__ui__levelselect__LevelSelectUI.js.patch  ->  scripts/ui/levelselect/Lev
 scripts__ui__title__TitleContainer.js.patch  ->  scripts/ui/title/TitleContainer.js
 scripts__ui__ugc__FactoryContainer.js.patch  ->  scripts/ui/ugc/FactoryContainer.js
 scripts__ui__ugc__FishBowl.js.patch  ->  scripts/ui/ugc/FishBowl.js
+scripts__ui__ugc__FishBowlGlobal.js.patch  ->  scripts/ui/ugc/FishBowlGlobal.js
 scripts__ui__ugc__KeyboardController.js.patch  ->  scripts/ui/ugc/KeyboardController.js
 scripts__ui__ugc__MouseController.js.patch  ->  scripts/ui/ugc/MouseController.js
 scripts__ui__ugc__StampContainer.js.patch  ->  scripts/ui/ugc/StampContainer.js

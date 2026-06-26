@@ -1,0 +1,18 @@
+diff --git a/scripts/pt/ugc/dataproviders/LocalDataProvider.js b/scripts/pt/ugc/dataproviders/LocalDataProvider.js
+--- a/scripts/pt/ugc/dataproviders/LocalDataProvider.js
++++ b/scripts/pt/ugc/dataproviders/LocalDataProvider.js
+@@ -293,8 +293,12 @@
+                     }
+ 
+                     if (post.body == null) {
+-                        if (this._localMemos[i]) {
+-                            post.memoCtx.drawImage(this._localMemos[i], 0, 0);
++                        var memoImg = this._localMemos[i];
++                        // A memo image that failed to load (missing/empty file, e.g.
++                        // a text-only published post) stays in the 'broken' state and
++                        // would throw on drawImage. Only draw a fully decoded image.
++                        if (memoImg && memoImg.complete && memoImg.naturalWidth > 0) {
++                            post.memoCtx.drawImage(memoImg, 0, 0);
+                         } else {
+                             post.memoCtx.clear();
+                         }

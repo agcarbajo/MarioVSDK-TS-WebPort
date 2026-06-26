@@ -77,7 +77,46 @@
             fire(mv, "downloadPostSuccess", { posts: [] });
         });
     };
-    mv.getCommentList = function () { fire(mv, "downloadCommentSuccess", { comments: [] }); };
+    // Comments: served from the backend keyed by the post (level) id.
+    mv.getCommentList = function (commentSearchParam) {
+        var postID = commentSearchParam && commentSearchParam.postID;
+        if (!postID || !ready()) { fire(mv, "downloadCommentSuccess", { comments: [] }); return; }
+        rest().getComments(postID).then(function (r) {
+            var comments = (r.comments || []).map(buildRawComment);
+            log("getCommentList -> " + comments.length + " comment(s)");
+            fire(mv, "downloadCommentSuccess", { comments: comments });
+        }).catch(function (e) {
+            log("getCommentList failed: " + e.message);
+            fire(mv, "downloadCommentSuccess", { comments: [] });
+        });
+    };
+
+    // Posting a comment: the body text is what we persist; the appData is kept
+    // opaque (we don't need it server-side for plain comments).
+    mv.sendComment = function (uploadComment) {
+        var postID = uploadComment && uploadComment.postID;
+        var body = (uploadComment && uploadComment.body) || "";
+        var done = function () { fire(mv, "uploadCommentSuccess", { uploadResult: {} }); };
+        if (postID && body && ready()) {
+            rest().addComment(postID, body).then(function () { log("comment posted to " + postID); done(); },
+                                                 function (e) { log("comment post failed: " + e.message); done(); });
+        } else { done(); }
+    };
+    mv.uploadComment = mv.sendComment;
+
+    // Empathy (the in-game "stars"/likes) maps to the backend star toggle.
+    mv.addEmpathy = function (postID) {
+        if (postID && ready()) {
+            rest().starLevel(postID).then(function () { log("empathy added: " + postID); }, function (e) { log("addEmpathy failed: " + e.message); });
+        }
+        fire(mv, "addEmpathySuccess", { postID: postID });
+    };
+    mv.removeEmpathy = function (postID) {
+        if (postID && ready()) {
+            rest().starLevel(postID).then(function () { log("empathy removed: " + postID); }, function (e) { log("removeEmpathy failed: " + e.message); });
+        }
+        fire(mv, "removeEmpathySuccess", { postID: postID });
+    };
 
     function b64ToBlob(b64) {
         if (!b64) return new Blob([]);
@@ -103,7 +142,7 @@
             dateCreated: new Date(l.createdAt || Date.now()),
             replyCount: 0,
             empathyCount: l.stars || 0,
-            empathyAdded: false,
+            empathyAdded: !!l.starred,
             hasBodyText: !!l.body,
             body: l.body || "",
             hasMemo: false,
@@ -112,6 +151,24 @@
             platformType: 0,
             tested: true,
             shared: true
+        };
+    }
+    function buildRawComment(c) {
+        return {
+            id: c.id,
+            appData: null,
+            miiName: c.userName || "Player",
+            mii: getMii(),
+            miiExpression: 0,
+            posterID: numHash(c.userId),
+            regionID: 0,
+            dateCreated: new Date(c.createdAt || Date.now()),
+            hasBodyText: !!c.text,
+            body: c.text || "",
+            hasMemo: false,
+            renderMemo: function () {},
+            isSpoiler: false,
+            platformType: 0
         };
     }
     function fetchDataStore(dataID) {
