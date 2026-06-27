@@ -1,7 +1,23 @@
 diff --git a/scripts/lib/curl/curl.js b/scripts/lib/curl/curl.js
 --- a/scripts/lib/curl/curl.js
 +++ b/scripts/lib/curl/curl.js
-@@ -1100,6 +1100,18 @@
+@@ -712,7 +712,14 @@
+ 			el.type = def.mimetype || 'text/javascript';
+ 			// TODO: support other charsets?
+ 			el.charset = 'utf-8';
+-			el.async = !def.order;
++			// Force ordered (non-async) execution. Anonymous define()s are matched
++			// to their script via onload; some engines (notably the WebView2 engine
++			// used by the --package webview app) execute several parallel async
++			// scripts back-to-back before firing onload, so two anonymous defines
++			// collided ("Multiple anonymous defines in url"). async=false serializes
++			// execution (downloads still happen in parallel) and also lets
++			// document.currentScript identify the running script.
++			el.async = false;
+ 			el.src = def.url;
+ 
+ 			// loading will start when the script is inserted into the dom.
+@@ -1100,6 +1107,18 @@
  			// a UA sniff, thankfully.
  			// learned this trick from James Burke's RequireJS
  			var def;
