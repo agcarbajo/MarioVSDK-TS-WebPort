@@ -69,6 +69,15 @@ class _QuietHandler(http.server.SimpleHTTPRequestHandler):
     def log_message(self, *args):  # keep the console clean
         pass
 
+    def end_headers(self):
+        # Never let the embedded webview cache the game files. Otherwise the OS
+        # webview (e.g. WebView2) serves stale scripts after a rebuild because
+        # the asset URLs don't change, and fixes never take effect.
+        self.send_header("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0")
+        self.send_header("Pragma", "no-cache")
+        self.send_header("Expires", "0")
+        super().end_headers()
+
 
 class _ThreadingServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
     daemon_threads = True
