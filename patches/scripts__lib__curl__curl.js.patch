@@ -1,0 +1,22 @@
+diff --git a/scripts/lib/curl/curl.js b/scripts/lib/curl/curl.js
+--- a/scripts/lib/curl/curl.js
++++ b/scripts/lib/curl/curl.js
+@@ -1100,6 +1100,18 @@
+ 			// a UA sniff, thankfully.
+ 			// learned this trick from James Burke's RequireJS
+ 			var def;
++			// Modern engines expose the executing script via document.currentScript.
++			// Use it to name an anonymous define() immediately instead of deferring
++			// to the onload queue. Some webviews (e.g. WebView2) run several
++			// parallel-loaded scripts back-to-back before firing onload, which made
++			// two anonymous defines collide ("Multiple anonymous defines in url").
++			if (doc && doc.currentScript) {
++				for (var id in activeScripts) {
++					if (activeScripts[id] === doc.currentScript) {
++						return id;
++					}
++				}
++			}
+ 			if (!isType(global.opera, 'Opera')) {
+ 				for (var d in activeScripts) {
+ 					if (activeScripts[d].readyState == 'interactive') {

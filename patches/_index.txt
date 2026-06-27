@@ -5,6 +5,7 @@ layoutData__title_GAMEPAD_flyt.json.patch  ->  layoutData/title_GAMEPAD_flyt.jso
 layoutData__title_TV_flyt.json.patch  ->  layoutData/title_TV_flyt.json
 scripts__bootstrap.js.patch  ->  scripts/bootstrap.js
 scripts__lib__background__Background.js.patch  ->  scripts/lib/background/Background.js
+scripts__lib__curl__curl.js.patch  ->  scripts/lib/curl/curl.js
 scripts__lib__curl__plugin__audio.js.patch  ->  scripts/lib/curl/plugin/audio.js
 scripts__lib__curl__plugin__bundle.js.patch  ->  scripts/lib/curl/plugin/bundle.js
 scripts__lib__display__Backing.js.patch  ->  scripts/lib/display/Backing.js
