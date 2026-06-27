@@ -1,12 +1,14 @@
 (function webpackUniversalModuleDefinition(root, factory) {
 	if(typeof exports === 'object' && typeof module === 'object')
 		module.exports = factory();
-	else if(typeof define === 'function' && define.amd)
-		define([], factory);
 	else if(typeof exports === 'object')
 		exports["jsQR"] = factory();
 	else
 		root["jsQR"] = factory();
+	// NOTE: the AMD branch (define.amd) is intentionally removed. This lib is
+	// loaded via a plain <script> tag, but curl defines a global define.amd, so
+	// the UMD wrapper would register an anonymous AMD module that collides in
+	// curl ("Multiple anonymous defines in url").
 })(typeof self !== 'undefined' ? self : this, function() {
 return /******/ (function(modules) { // webpackBootstrap
 /******/ 	// The module cache

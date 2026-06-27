@@ -37,6 +37,8 @@ OVERLAY = REPO / "overlay"
 PATCHES = REPO / "patches"
 HOST_DIR = REPO / "host"
 DIST_DIR = REPO / "dist"
+ICON_ICO = REPO / "electron" / "game-icon.ico"     # Windows / generic
+ICON_ICNS = REPO / "electron" / "game-icon.icns"   # macOS (optional)
 
 # world N (1..7) -> stereo channel pair extracted from the 14-channel
 # level_select_full.ogg. Confirmed against the game's channel flags.
@@ -383,6 +385,10 @@ def package_app(out: Path, app_name: str, python: str):
            "--distpath", str(DIST_DIR),
            "--workpath", str(work),
            "--specpath", str(work)]
+    # Use the real game icon (same one as the favicon / Electron app).
+    icon = ICON_ICNS if sys.platform == "darwin" else ICON_ICO
+    if icon and icon.exists():
+        cmd += ["--icon", str(icon)]
     if have_webview:
         # GUI app (no console) + make sure pywebview's backend files are bundled.
         cmd += ["--windowed", "--collect-all", "webview"]
@@ -538,15 +544,18 @@ def main():
     info("")
     info("Build complete in %s: %s" % (_fmt_eta(time.time() - prog.start), out))
 
-    if args.package == "electron":
+    if args.package in ("electron", "webview"):
         info("")
-        package_electron(out, args.app_name)
+        if args.package == "electron":
+            package_electron(out, args.app_name)
+        else:
+            package_app(out, args.app_name, python)
+        # The built game is now copied inside the packaged app, so the
+        # intermediate build folder is no longer needed - remove it.
         info("")
-        info("Run the app by launching the executable above.")
-    elif args.package == "webview":
-        info("")
-        package_app(out, args.app_name, python)
-        info("")
+        info("Cleaning up the intermediate build folder ...")
+        shutil.rmtree(out, ignore_errors=True)
+        shutil.rmtree(REPO / "build", ignore_errors=True)
         info("Run the app by launching the executable above.")
     else:
         info("Serve it over HTTP (NOT file://), for example:")
