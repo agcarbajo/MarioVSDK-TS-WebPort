@@ -5,12 +5,18 @@
 // bundled game files and load it in a BrowserWindow. Electron ships its own
 // Chromium, so the resulting app is fully self-contained.
 
-const { app, BrowserWindow, Menu } = require("electron");
+const { app, BrowserWindow, Menu, session } = require("electron");
 const http = require("http");
 const fs = require("fs");
 const path = require("path");
 
 const APP_TITLE = "Mario vs. Donkey Kong: Tipping Stars";
+
+// The QR save-transfer feature uses the webcam. On Windows, Chromium's
+// MediaFoundation capture backend often fails to start some cameras with
+// "NotReadableError: Could not start video source"; forcing the older
+// DirectShow backend fixes it. (The WebView2 build uses the same flag.)
+app.commandLine.appendSwitch("disable-features", "MediaFoundationVideoCapture");
 
 // The game stores its save in IndexedDB, which is keyed by page origin
 // (http://127.0.0.1:<port>). We therefore serve on a FIXED port so the origin
@@ -141,7 +147,15 @@ if (!app.requestSingleInstanceLock()) {
     }
   });
 
-  app.whenReady().then(createWindow);
+  app.whenReady().then(function () {
+    // Trusted local app: grant webcam/mic (used by the QR save transfer) so the
+    // camera starts without a denied-permission failure.
+    session.defaultSession.setPermissionRequestHandler(function (wc, permission, callback) {
+      callback(true);
+    });
+    session.defaultSession.setPermissionCheckHandler(function () { return true; });
+    createWindow();
+  });
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

@@ -34,6 +34,16 @@ for _name in ("stdout", "stderr"):
         except Exception:
             pass
 
+# The QR save-transfer feature uses the webcam. On Windows the WebView2
+# (Edge/Chromium) MediaFoundation capture backend often fails to start some
+# cameras ("NotReadableError: Could not start video source"); forcing the
+# DirectShow backend fixes it. Must be set before WebView2 initialises.
+_wv2_args = os.environ.get("WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS", "")
+if "MediaFoundationVideoCapture" not in _wv2_args:
+    os.environ["WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS"] = (
+        (_wv2_args + " " if _wv2_args else "") + "--disable-features=MediaFoundationVideoCapture"
+    )
+
 APP_TITLE = "Mario vs. Donkey Kong: Tipping Stars"
 WINDOW_W = 960
 WINDOW_H = 600

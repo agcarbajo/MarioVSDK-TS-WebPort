@@ -435,10 +435,24 @@
         var total = 0;
         var busy = false;
 
-        navigator.mediaDevices.getUserMedia({
+        // Try the preferred constraints first; if the source can't start with
+        // them (NotReadableError / OverconstrainedError on some cameras/drivers),
+        // retry with the simplest possible request before giving up.
+        function openCamera(constraints, allowRetry) {
+            return navigator.mediaDevices.getUserMedia(constraints).catch(function (err) {
+                if (allowRetry && (err && (err.name === "NotReadableError" ||
+                        err.name === "OverconstrainedError" || err.name === "AbortError"))) {
+                    console.warn("[save-qr] camera retry with basic constraints (" + err.name + ")");
+                    return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                }
+                throw err;
+            });
+        }
+
+        openCamera({
             video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
             audio: false
-        }).then(function (stream) {
+        }, true).then(function (stream) {
             activeStream = stream;
             video.srcObject = stream;
             setStatus(t("importHint"));
