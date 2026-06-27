@@ -1,0 +1,12 @@
+diff --git a/scripts/lib/curl/plugin/link.js b/scripts/lib/curl/plugin/link.js
+--- a/scripts/lib/curl/plugin/link.js
++++ b/scripts/lib/curl/plugin/link.js
+@@ -70,7 +70,7 @@
+ 		return url.replace(isProtocolRelativeRx, protocol + '//');
+ 	}
+ 
+-	define(/*=='curl/plugin/link',==*/ {
++	define('curl/plugin/link', {
+ 
+ //		'normalize': function (resourceId, toAbsId) {
+ //			// remove options

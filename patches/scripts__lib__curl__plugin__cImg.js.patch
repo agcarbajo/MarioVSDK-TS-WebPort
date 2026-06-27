@@ -1,0 +1,12 @@
+diff --git a/scripts/lib/curl/plugin/cImg.js b/scripts/lib/curl/plugin/cImg.js
+--- a/scripts/lib/curl/plugin/cImg.js
++++ b/scripts/lib/curl/plugin/cImg.js
+@@ -19,7 +19,7 @@
+ 	L8:       'l8'
+ }
+ 
+-define(/*=='curl/plugin/cImg',==*/ function () {
++define('curl/plugin/cImg', function () {
+ 	"use strict";
+ 
+ 	function error (ex) {

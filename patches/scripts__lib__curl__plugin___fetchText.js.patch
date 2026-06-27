@@ -1,0 +1,9 @@
+diff --git a/scripts/lib/curl/plugin/_fetchText.js b/scripts/lib/curl/plugin/_fetchText.js
+--- a/scripts/lib/curl/plugin/_fetchText.js
++++ b/scripts/lib/curl/plugin/_fetchText.js
+@@ -1,4 +1,4 @@
+-define([], function () {
++define('curl/plugin/_fetchText', [], function () {
+ 
+ 	var xhr, progIds;
+ 

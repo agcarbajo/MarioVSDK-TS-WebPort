@@ -1,0 +1,12 @@
+diff --git a/scripts/lib/curl/plugin/css.js b/scripts/lib/curl/plugin/css.js
+--- a/scripts/lib/curl/plugin/css.js
++++ b/scripts/lib/curl/plugin/css.js
+@@ -512,7 +512,7 @@
+ 
+ 	/***** finally! the actual plugin *****/
+ 
+-	define(/*=='curl/plugin/css',==*/ {
++	define('curl/plugin/css', {
+ 
+ 		'normalize': function (resourceId, normalize) {
+ 			var resources, normalized;

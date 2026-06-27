@@ -1,8 +1,16 @@
 diff --git a/scripts/lib/curl/plugin/bundle.js b/scripts/lib/curl/plugin/bundle.js
-index 904f8fb..bba4718 100644
 --- a/scripts/lib/curl/plugin/bundle.js
 +++ b/scripts/lib/curl/plugin/bundle.js
-@@ -26,13 +26,9 @@ define(/*=='curl/plugin/bundle',==*/ function () {
+@@ -7,7 +7,7 @@
+  */
+ 
+ (function ( global ) {
+-define(/*=='curl/plugin/bundle',==*/ function () {
++define('curl/plugin/bundle', function () {
+ 	"use strict";
+ 
+ 	function error (ex) {
+@@ -26,13 +26,9 @@
  	return {
  
  		load: function (absId, require, loaded, config) {
@@ -18,7 +26,7 @@ index 904f8fb..bba4718 100644
  
  			// set options
  			option = ( option.length > 1 ) ? option[option.length-1].toLowerCase() : Options.NONE;
-@@ -46,53 +42,24 @@ define(/*=='curl/plugin/bundle',==*/ function () {
+@@ -46,53 +42,24 @@
  			}
  		/* #endif */
  
@@ -58,19 +66,20 @@ index 904f8fb..bba4718 100644
 -				file = null;
 -
 -				loaded( evt.data );
+-
+-			/* #ifdef PROFILE_ENABLED */
+-				if( PRINT_STATS ) vsm.stats.stopTimeCapture( absId + ' totalLoad' );
+-			/* #endif */
 +			if( !global.ChromiumPort || !global.ChromiumPort.loadGtxBundle ) {
 +				return onError({ errorID: 1, message: "ChromiumPort.loadGtxBundle is not available" });
-+			}
+ 			}
  
--			/* #ifdef PROFILE_ENABLED */
 +			global.ChromiumPort.loadGtxBundle(relPath).then(function (images) {
 +				if( PRINT_STATS ) vsm.stats.stopTimeCapture( absId + ' dataLoad' );
 +				loaded(images);
- 				if( PRINT_STATS ) vsm.stats.stopTimeCapture( absId + ' totalLoad' );
--			/* #endif */
--			}
++				if( PRINT_STATS ) vsm.stats.stopTimeCapture( absId + ' totalLoad' );
 +			}, onError);
- 
++
  			function onError ( evt ){
 -				//console.log( evt );
  				var ex = new global.Error();
@@ -81,10 +90,3 @@ index 904f8fb..bba4718 100644
  				errback( ex );
  			}
  
-@@ -106,4 +73,4 @@ define(/*=='curl/plugin/bundle',==*/ function () {
- 	};
- 
- });
--}( this ));
-\ No newline at end of file
-+}( this ));

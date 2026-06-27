@@ -1,0 +1,12 @@
+diff --git a/scripts/lib/curl/plugin/text.js b/scripts/lib/curl/plugin/text.js
+--- a/scripts/lib/curl/plugin/text.js
++++ b/scripts/lib/curl/plugin/text.js
+@@ -12,7 +12,7 @@
+  *
+  */
+ 
+-define(/*=='curl/plugin/text',==*/ ['./_fetchText'], function (fetchText) {
++define('curl/plugin/text', ['./_fetchText'], function (fetchText) {
+ 
+ 	return {
+ 

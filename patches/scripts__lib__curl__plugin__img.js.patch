@@ -1,0 +1,12 @@
+diff --git a/scripts/lib/curl/plugin/img.js b/scripts/lib/curl/plugin/img.js
+--- a/scripts/lib/curl/plugin/img.js
++++ b/scripts/lib/curl/plugin/img.js
+@@ -7,7 +7,7 @@
+  */
+ 
+ (function ( global ) {
+-define(/*=='curl/plugin/img',==*/ function () {
++define('curl/plugin/img', function () {
+ 	"use strict";
+ 
+ 	function error (ex) {

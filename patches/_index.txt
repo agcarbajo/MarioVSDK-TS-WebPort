@@ -6,8 +6,17 @@ layoutData__title_TV_flyt.json.patch  ->  layoutData/title_TV_flyt.json
 scripts__bootstrap.js.patch  ->  scripts/bootstrap.js
 scripts__lib__background__Background.js.patch  ->  scripts/lib/background/Background.js
 scripts__lib__curl__curl.js.patch  ->  scripts/lib/curl/curl.js
+scripts__lib__curl__plugin___fetchText.js.patch  ->  scripts/lib/curl/plugin/_fetchText.js
 scripts__lib__curl__plugin__audio.js.patch  ->  scripts/lib/curl/plugin/audio.js
 scripts__lib__curl__plugin__bundle.js.patch  ->  scripts/lib/curl/plugin/bundle.js
+scripts__lib__curl__plugin__cImg.js.patch  ->  scripts/lib/curl/plugin/cImg.js
+scripts__lib__curl__plugin__css.js.patch  ->  scripts/lib/curl/plugin/css.js
+scripts__lib__curl__plugin__domReady.js.patch  ->  scripts/lib/curl/plugin/domReady.js
+scripts__lib__curl__plugin__img.js.patch  ->  scripts/lib/curl/plugin/img.js
+scripts__lib__curl__plugin__js.js.patch  ->  scripts/lib/curl/plugin/js.js
+scripts__lib__curl__plugin__json.js.patch  ->  scripts/lib/curl/plugin/json.js
+scripts__lib__curl__plugin__link.js.patch  ->  scripts/lib/curl/plugin/link.js
+scripts__lib__curl__plugin__text.js.patch  ->  scripts/lib/curl/plugin/text.js
 scripts__lib__display__Backing.js.patch  ->  scripts/lib/display/Backing.js
 scripts__lib__display__Layer.js.patch  ->  scripts/lib/display/Layer.js
 scripts__lib__display__Tile.js.patch  ->  scripts/lib/display/Tile.js

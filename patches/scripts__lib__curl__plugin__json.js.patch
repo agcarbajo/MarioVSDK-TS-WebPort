@@ -1,0 +1,12 @@
+diff --git a/scripts/lib/curl/plugin/json.js b/scripts/lib/curl/plugin/json.js
+--- a/scripts/lib/curl/plugin/json.js
++++ b/scripts/lib/curl/plugin/json.js
+@@ -7,7 +7,7 @@
+  */
+ 
+ (function ( global ) {
+-define(/*=='curl/plugin/json',==*/ function (fetchText) {
++define('curl/plugin/json', function (fetchText) {
+ 
+ 	function fetchText (url, callback, errback) {
+ 		var x = new XMLHttpRequest();

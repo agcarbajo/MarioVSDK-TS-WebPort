@@ -1,12 +1,14 @@
 diff --git a/scripts/lib/curl/plugin/audio.js b/scripts/lib/curl/plugin/audio.js
-index 31284fc..915a67a 100644
 --- a/scripts/lib/curl/plugin/audio.js
 +++ b/scripts/lib/curl/plugin/audio.js
-@@ -13,7 +13,132 @@ var AudioTypes = {
+@@ -13,10 +13,135 @@
  	STREAM: 'stream'
  }
  
 -var audCTX = null;
+-
+-
+-define(/*=='curl/plugin/audio',==*/ function () {
 +	var audCTX = null;
 +	var warnedDecodeFallback = false;
 +	var warnedDspFallback = false;
@@ -133,10 +135,13 @@ index 31284fc..915a67a 100644
 +
 +		return audioBuffer;
 +	}
++
++
++define('curl/plugin/audio', function () {
+ 	"use strict";
  
- 
- define(/*=='curl/plugin/audio',==*/ function () {
-@@ -45,14 +170,37 @@ define(/*=='curl/plugin/audio',==*/ function () {
+ 	function error (ex) {
+@@ -45,14 +170,37 @@
  				request.open("GET", url, true);
  				request.responseType = "arraybuffer";
  
@@ -177,7 +182,7 @@ index 31284fc..915a67a 100644
  					  			return;
  					  		}
  					  		//console.log("Decoded File!");
-@@ -60,10 +208,26 @@ define(/*=='curl/plugin/audio',==*/ function () {
+@@ -60,10 +208,26 @@
  					  		onLoad();
  					  	},
  						function (error) {
@@ -206,10 +211,3 @@ index 31284fc..915a67a 100644
  				}
  
  				request.onerror = onError;
-@@ -129,4 +293,4 @@ define(/*=='curl/plugin/audio',==*/ function () {
- 	};
- 
- });
--}( this ));
-\ No newline at end of file
-+}( this ));

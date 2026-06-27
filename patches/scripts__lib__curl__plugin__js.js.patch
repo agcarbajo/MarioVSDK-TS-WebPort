@@ -1,0 +1,12 @@
+diff --git a/scripts/lib/curl/plugin/js.js b/scripts/lib/curl/plugin/js.js
+--- a/scripts/lib/curl/plugin/js.js
++++ b/scripts/lib/curl/plugin/js.js
+@@ -29,7 +29,7 @@
+  *
+  */
+ (function (global, doc, testGlobalVar) {
+-define(/*=='curl/plugin/js',==*/ ['curl/_privileged'], function (priv) {
++define('curl/plugin/js', ['curl/_privileged'], function (priv) {
+ "use strict";
+ 	var cache = {},
+ 		queue = [],

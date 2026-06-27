@@ -1,0 +1,12 @@
+diff --git a/scripts/lib/curl/plugin/domReady.js b/scripts/lib/curl/plugin/domReady.js
+--- a/scripts/lib/curl/plugin/domReady.js
++++ b/scripts/lib/curl/plugin/domReady.js
+@@ -20,7 +20,7 @@
+  * TODO: use "../domReady" instead of "curl/domReady" when curl's make.sh is updated to use cram
+  */
+ 
+-define(/*=='curl/plugin/domReady',==*/ ['../domReady'], function (domReady) {
++define('curl/plugin/domReady', ['../domReady'], function (domReady) {
+ 
+ 	return {
+ 
