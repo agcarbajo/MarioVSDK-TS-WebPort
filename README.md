@@ -83,13 +83,13 @@ renames it). It uses the real game icon.
 python build.py --src "/path/to/your/game/files" --package
 ```
 
-* **`--package`** (default, **WebView**) — lightweight: reuses the OS's browser
-  engine instead of bundling Chromium. Needs **PyInstaller**
-  (`pip install pyinstaller`); **pywebview** is optional (`pip install pywebview`)
-  for a native window, otherwise it opens your default browser.
-* **`--package electron`** — fully self-contained: bundles its own Chromium, so
-  it depends on nothing pre-installed. Needs **Node.js + npm** (the first run
-  downloads Electron).
+* **`--package`** (default, **Electron**) — fully self-contained: bundles its
+  own Chromium, so it depends on nothing pre-installed. Needs **Node.js + npm**
+  (the first run downloads Electron).
+* **`--package webview`** — lightweight: reuses the OS's browser engine instead
+  of bundling Chromium. Needs **PyInstaller** (`pip install pyinstaller`);
+  **pywebview** is optional (`pip install pywebview`) for a native window,
+  otherwise it opens your default browser.
 
 The app is built only for the OS you run the command on (neither Electron nor
 PyInstaller cross-compiles).

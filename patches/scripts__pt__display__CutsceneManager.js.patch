@@ -1,29 +1,32 @@
 diff --git a/scripts/pt/display/CutsceneManager.js b/scripts/pt/display/CutsceneManager.js
-index f74a87b..ddbd187 100644
 --- a/scripts/pt/display/CutsceneManager.js
 +++ b/scripts/pt/display/CutsceneManager.js
-@@ -177,12 +177,18 @@ var pt;
-                 return (this.video.isDone() && true);
-             };
+@@ -117,6 +117,15 @@
+                 this._camOffsetX = offsetX;
+                 this._camOffsetY = offsetY;
  
--            CutsceneManager.prototype.destroy = function () {
--                this.video.destroy();
--                this._actorDict = null;
--            };
--
--            CutsceneManager.prototype._triggerAnimation = function (overlay) {
-+            CutsceneManager.prototype.destroy = function () {
-+                this.video.destroy();
-+                this._actorDict = null;
-+            };
++                // The video's intrinsic size is only known once its metadata has
++                // loaded. Computing the fit scale before then divides by 0 and
++                // yields an Infinity scale, so the cutscene renders un-shrunk.
++                // Skip until the dimensions are known (this runs every frame, so
++                // it self-corrects as soon as metadata arrives).
++                if (this.video && (!this.video.width || !this.video.height)) {
++                    return;
++                }
++
+                 var vidScale = 1;
+                 if (this.video) {
+                     if (this._renderMode === CutsceneRenderMode.Mirror) {
+@@ -181,6 +190,12 @@
+                 this.video.destroy();
+                 this._actorDict = null;
+             };
 +            CutsceneManager.prototype.stop = function () {
 +                if (this.video) {
 +                    this.video.stop();
 +                }
 +                this._playing = false;
 +            };
-+
-+            CutsceneManager.prototype._triggerAnimation = function (overlay) {
+ 
+             CutsceneManager.prototype._triggerAnimation = function (overlay) {
                  var actor = this._actorDict[overlay.actor];
-                 actor.setState(overlay.state, true);
-                 actor.position.x = overlay.offset.x;

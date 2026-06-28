@@ -459,7 +459,7 @@
             scanLoop();
         }).catch(function (err) {
             console.error("[save-qr] camera failed", err);
-            setStatus(t("cameraUnsupported"));
+            setStatus(t("cameraUnsupported") + (err && err.name ? " [" + err.name + "]" : ""));
         });
 
         function readQrWithJsQr(source) {

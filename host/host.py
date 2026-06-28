@@ -48,6 +48,24 @@ APP_TITLE = "Mario vs. Donkey Kong: Tipping Stars"
 WINDOW_W = 960
 WINDOW_H = 600
 
+# The game saves to IndexedDB, which is keyed by page origin. Serve on a FIXED
+# port so the origin (http://127.0.0.1:<port>) is stable across launches and the
+# save persists, mirroring the Electron build.
+FIXED_PORT = 47821
+
+
+def _storage_path():
+    """A stable per-user folder for the webview's persistent storage
+    (IndexedDB/localStorage), so saves survive closing the app."""
+    base = (os.environ.get("LOCALAPPDATA") or os.environ.get("XDG_DATA_HOME")
+            or os.path.expanduser("~/.local/share"))
+    path = os.path.join(base, "MvDK-TippingStars", "webview")
+    try:
+        os.makedirs(path, exist_ok=True)
+    except Exception:
+        pass
+    return path
+
 
 def _candidate_roots():
     roots = []
@@ -96,7 +114,12 @@ class _ThreadingServer(socketserver.ThreadingMixIn, http.server.HTTPServer):
 
 def start_server(root, port=0):
     handler = functools.partial(_QuietHandler, directory=root)
-    httpd = _ThreadingServer(("127.0.0.1", port), handler)
+    try:
+        httpd = _ThreadingServer(("127.0.0.1", port), handler)
+    except OSError:
+        # Preferred fixed port busy: fall back to a free one so the app still
+        # runs (the save may not carry over for this session only).
+        httpd = _ThreadingServer(("127.0.0.1", 0), handler)
     threading.Thread(target=httpd.serve_forever, daemon=True).start()
     return httpd.server_address[1]
 
@@ -104,7 +127,8 @@ def start_server(root, port=0):
 def main():
     ap = argparse.ArgumentParser(description="Host the MvDK: Tipping Stars web port.")
     ap.add_argument("--web", help="Path to the web folder (default: auto-detect next to the app).")
-    ap.add_argument("--port", type=int, default=0, help="Fixed port (default: a free port).")
+    ap.add_argument("--port", type=int, default=FIXED_PORT,
+                    help="Fixed port for a stable save origin (default: %d)." % FIXED_PORT)
     ap.add_argument("--no-window", action="store_true",
                     help="Always use the default browser instead of a native window.")
     args = ap.parse_args()
@@ -123,7 +147,13 @@ def main():
         try:
             import webview
             webview.create_window(APP_TITLE, url, width=WINDOW_W, height=WINDOW_H)
-            webview.start()
+            # private_mode=False + a stable storage_path so IndexedDB/localStorage
+            # (the game save) persist across launches. Fall back gracefully on
+            # older pywebview versions that lack these arguments.
+            try:
+                webview.start(private_mode=False, storage_path=_storage_path())
+            except TypeError:
+                webview.start()
             return 0
         except Exception as ex:  # noqa: BLE001
             print("Native window unavailable (%s); opening the default browser instead." % ex)

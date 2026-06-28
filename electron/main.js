@@ -154,6 +154,12 @@ if (!app.requestSingleInstanceLock()) {
       callback(true);
     });
     session.defaultSession.setPermissionCheckHandler(function () { return true; });
+    // Electron also gates the actual device (camera/mic) behind a separate
+    // handler; without it getUserMedia can fail even after the permission is
+    // granted. Allow camera/mic for this trusted local app.
+    if (session.defaultSession.setDevicePermissionHandler) {
+      session.defaultSession.setDevicePermissionHandler(function () { return true; });
+    }
     createWindow();
   });
 
