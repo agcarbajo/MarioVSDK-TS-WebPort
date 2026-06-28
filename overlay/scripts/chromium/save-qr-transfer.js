@@ -435,24 +435,45 @@
         var total = 0;
         var busy = false;
 
-        // Try the preferred constraints first; if the source can't start with
-        // them (NotReadableError / OverconstrainedError on some cameras/drivers),
-        // retry with the simplest possible request before giving up.
-        function openCamera(constraints, allowRetry) {
-            return navigator.mediaDevices.getUserMedia(constraints).catch(function (err) {
-                if (allowRetry && (err && (err.name === "NotReadableError" ||
-                        err.name === "OverconstrainedError" || err.name === "AbortError"))) {
-                    console.warn("[save-qr] camera retry with basic constraints (" + err.name + ")");
-                    return navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+        // Robust camera open: preferred constraints -> simplest {video:true} ->
+        // try each camera device individually. The last step matters on machines
+        // with several cameras (incl. virtual ones like OBS) where the default
+        // pick may be busy or unable to start ("NotReadableError").
+        var SOURCE_ERRORS = { NotReadableError: 1, OverconstrainedError: 1, AbortError: 1, NotFoundError: 1 };
+        function getUM(c) { return navigator.mediaDevices.getUserMedia(c); }
+        function tryEachCamera() {
+            return navigator.mediaDevices.enumerateDevices().then(function (devs) {
+                var cams = devs.filter(function (d) { return d.kind === "videoinput"; });
+                var i = 0;
+                function next() {
+                    if (i >= cams.length) return Promise.reject(new Error("no camera could start"));
+                    var id = cams[i++].deviceId;
+                    return getUM({ video: id ? { deviceId: { exact: id } } : true, audio: false })
+                        .catch(function () { return next(); });
+                }
+                return next();
+            });
+        }
+        function openCamera() {
+            return getUM({
+                video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
+                audio: false
+            }).catch(function (err) {
+                if (err && SOURCE_ERRORS[err.name]) {
+                    console.warn("[save-qr] camera retry, basic constraints (" + err.name + ")");
+                    return getUM({ video: true, audio: false }).catch(function (err2) {
+                        if (err2 && SOURCE_ERRORS[err2.name]) {
+                            console.warn("[save-qr] camera retry, per-device (" + err2.name + ")");
+                            return tryEachCamera();
+                        }
+                        throw err2;
+                    });
                 }
                 throw err;
             });
         }
 
-        openCamera({
-            video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-        }, true).then(function (stream) {
+        openCamera().then(function (stream) {
             activeStream = stream;
             video.srcObject = stream;
             setStatus(t("importHint"));
