@@ -82,7 +82,10 @@
         var postID = commentSearchParam && commentSearchParam.postID;
         if (!postID || !ready()) { fire(mv, "downloadCommentSuccess", { comments: [] }); return; }
         rest().getComments(postID).then(function (r) {
-            var comments = (r.comments || []).map(buildRawComment);
+            // Backend returns oldest-first. The game reverses the list when it
+            // lays comments out, so reverse here (newest-first) to end up with the
+            // newest comment at the BOTTOM of the displayed list.
+            var comments = (r.comments || []).slice().reverse().map(buildRawComment);
             log("getCommentList -> " + comments.length + " comment(s)");
             fire(mv, "downloadCommentSuccess", { comments: comments });
         }).catch(function (e) {
@@ -327,15 +330,14 @@
         var postID = "post-" + (++postSeq) + "-" + Date.now();
         var dataIDs = pendingDataIDs.slice();
         pendingDataIDs = [];
-        // The initial comment captured by the composer before publishing (text +
-        // optional drawing). Used as the post's body / memo.
+        // Captured before publishing: the initial comment (text + optional
+        // drawing), a thumbnail snapshot, and the real level name.
         var initial = global.__chromiumPendingInitialComment || {};
         global.__chromiumPendingInitialComment = null;
-        // Fallback level thumbnail captured from the workshop snapshot (the post
-        // itself carries no separate screenshot here). Stored as base64.
         var pendingShot = (global.__chromiumPendingScreenshot || "").replace(/^data:[^,]+,/, "");
         global.__chromiumPendingScreenshot = null;
-        var body = (initial.text || (uploadPost && uploadPost.body) || "").toString();
+        var levelName = (global.__chromiumPendingLevelName || (uploadPost && uploadPost.body) || "").toString();
+        global.__chromiumPendingLevelName = null;
         Promise.all([
             blobToB64(uploadPost && uploadPost.appData),
             blobToB64(uploadPost && uploadPost.screenshot)
@@ -344,14 +346,19 @@
             if (ready()) {
                 rest().nativeCreatePost({
                     postID: postID,
-                    title: body || "Nivel",
-                    body: body,
-                    memo: initial.memo || "",
+                    title: levelName || "Nivel",
+                    body: "",  // the initial comment is posted as a real comment below
                     communityType: communityIdToType(uploadPost && uploadPost.communityID),
                     appData: r[0], screenshot: r[1] || pendingShot,
                     primaryID: dataIDs[0] || "", secondaryID: dataIDs[1] || ""
-                }).then(function () { log("level uploaded to server: " + postID); done(); },
-                         function (e) { log("native post upload failed: " + e.message); done(); });
+                }).then(function () {
+                    log("level uploaded to server: " + postID);
+                    // Post the initial comment as a real comment so it shows in the
+                    // comment list and on the server (not just an unstyled body).
+                    if (initial.text || initial.memo) {
+                        return rest().addComment(postID, initial.text || "", "", initial.memo || "").catch(function () {});
+                    }
+                }).then(done, function (e) { log("native post upload failed: " + e.message); done(); });
             } else { done(); }
         });
         return 0;

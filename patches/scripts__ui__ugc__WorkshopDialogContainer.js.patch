@@ -1,7 +1,7 @@
 diff --git a/scripts/ui/ugc/WorkshopDialogContainer.js b/scripts/ui/ugc/WorkshopDialogContainer.js
 --- a/scripts/ui/ugc/WorkshopDialogContainer.js
 +++ b/scripts/ui/ugc/WorkshopDialogContainer.js
-@@ -342,6 +342,29 @@
+@@ -342,6 +342,33 @@
          };
  
          WorkshopDialogContainer.prototype._beginShare = function () {
@@ -13,10 +13,14 @@ diff --git a/scripts/ui/ugc/WorkshopDialogContainer.js b/scripts/ui/ugc/Workshop
 +                window.ChromiumPortCommentUI.openCompose(
 +                    function (result) {
 +                        window.__chromiumPendingInitialComment = result || { text: "", memo: "" };
-+                        // Capture the rendered level snapshot so the server (and
-+                        // admin panel) have a real thumbnail for the post.
++                        // Capture the rendered level snapshot (admin thumbnail) and
++                        // the real level name so the server stores them reliably.
 +                        try {
 +                            if (self._tvLevelCanvas) window.__chromiumPendingScreenshot = self._tvLevelCanvas.toDataURL("image/png");
++                        } catch (e) {}
++                        try {
++                            var p = ui.ugc.currentPost;
++                            window.__chromiumPendingLevelName = (p && p.levelMapDef && p.levelMapDef.header && p.levelMapDef.header.name) || (p && p.levelName) || "";
 +                        } catch (e) {}
 +                        self._doBeginShare();
 +                    },
@@ -31,7 +35,7 @@ diff --git a/scripts/ui/ugc/WorkshopDialogContainer.js b/scripts/ui/ugc/Workshop
              this.lock();
  
              var msg = pt.asset.messageStudioData.getText('msg_post_warning');
-@@ -358,12 +381,20 @@
+@@ -358,12 +385,20 @@
              var body = null;
              var memo = null;
  

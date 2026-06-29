@@ -1,7 +1,7 @@
 diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.js
 --- a/scripts/ui/ugc/DialogContainer.js
 +++ b/scripts/ui/ugc/DialogContainer.js
-@@ -228,9 +228,30 @@
+@@ -228,18 +228,62 @@
  
          DialogContainer.prototype._openComment = function (btn) {
              if (btn.genericButtonAction(false)) {
@@ -35,7 +35,42 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
              }
          };
  
-@@ -429,6 +450,20 @@
+         DialogContainer.prototype._openMiiverse = function (btn) {
+             if (btn.genericButtonAction(false)) {
+                 lib.sound.SoundPlayer.instance.playSFX('MIIVERSE_TAB');
+-
+-                var msg = pt.asset.messageStudioData.getText('dialog_launch_miiverse_warning');
+-                window.signals.showMessageBox.dispatch(msg, ui.Dialogs.GenericDialogButton.GDB_YES_NO, ui.Dialogs.GenericDialogType.GDT_SMALL, this._onConfirmMiiversePopupExit.bind(this));
++                // There is no Miiverse here; repurpose this button to REFRESH the
++                // server-side info (comments, likes, stars) for the level being
++                // viewed, so newly-added comments/likes appear on demand.
++                this._refreshLevelInfo();
++            }
++        };
++
++        DialogContainer.prototype._refreshLevelInfo = function () {
++            var post = ui.ugc.currentPost;
++            if (!post) return;
++            var self = this;
++            // Re-download the comment list (drop the cached copy first).
++            try {
++                var sg = pt.ugc.ugcManager && pt.ugc.ugcManager._serviceGroup;
++                if (sg && sg.destroyCommentCache) sg.destroyCommentCache(post.postID);
++            } catch (e) {}
++            ui.ugcSignals.clearData.dispatch('comments');
++            ui.ugcSignals.getComments.dispatch(ui.ugc.activeFilter, post.dataIndex);
++            // Re-fetch the like/star counts from the server.
++            if (post.postID && window.ChromiumPortCommunity && window.ChromiumPortCommunity.isReady()) {
++                window.ChromiumPortCommunity.rest.nativeGetLevel(post.postID).then(function (info) {
++                    if (!info) return;
++                    post.empathyCount = info.stars;
++                    try { self._layoutTVPanes.lvldeet_yeahs.setText(info.stars); } catch (e) {}
++                    try { self._layoutGPPanes.lvldeet_yeahs.setText(info.stars); } catch (e) {}
++                }).catch(function () {});
+             }
+         };
+ 
+@@ -429,6 +473,20 @@
              }
  
              this._commentPosY = this._gpComments[this._gpComments.length - 1].refreshMain(post);
