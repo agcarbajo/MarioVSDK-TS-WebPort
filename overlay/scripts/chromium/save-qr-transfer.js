@@ -267,7 +267,16 @@
                 var snap = {};
                 for (var si = 0; si < localStorage.length; ++si) {
                     var k = localStorage.key(si);
-                    if (k != null) snap[k] = localStorage.getItem(k);
+                    if (k == null) continue;
+                    var val = localStorage.getItem(k);
+                    // Drop the community profile photo: it's a large data URL that
+                    // would explode the QR count. The rest of the profile (server,
+                    // name, id, token) is kept, and the photo can be re-set or
+                    // re-fetched from the server.
+                    if (k === "mvdk_community_profile" && val) {
+                        try { var pj = JSON.parse(val); delete pj.avatar; val = JSON.stringify(pj); } catch (e) {}
+                    }
+                    snap[k] = val;
                 }
                 records.push({
                     path: "settings/localStorage.json",
