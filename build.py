@@ -543,8 +543,11 @@ def main():
     ap = argparse.ArgumentParser(description="Build the MvDK: Tipping Stars browser port.")
     ap.add_argument("--src", required=True,
                     help="Path to your original game files (dump root or app folder).")
-    ap.add_argument("--out", default=str(REPO / "build" / "chromium-port"),
-                    help="Output folder for the built port (default: build/chromium-port).")
+    ap.add_argument("--out", default=None,
+                    help="Output folder for the built port (default: build/chromium-port). "
+                         "When left at the default and a previous build is found there, "
+                         "the build is incremental automatically (use --clean to force a "
+                         "full rebuild).")
     ap.add_argument("--package", nargs="?", const="electron",
                     choices=["electron", "webview"], default=None,
                     help="After building, also package a standalone desktop app "
@@ -555,14 +558,20 @@ def main():
     ap.add_argument("--app-name", default="MvDK-Tipping-Stars",
                     help="Name for the packaged app/executable (default: MvDK-Tipping-Stars).")
     ap.add_argument("--incremental", action="store_true",
-                    help="Reuse an existing output folder: copy only changed game "
-                         "files, re-apply all patches, and skip textures/music "
-                         "already produced by a previous build. Much faster for "
-                         "repeated rebuilds with the same game files.")
+                    help="Force an incremental rebuild: reuse the output folder, copy "
+                         "only changed game files, re-apply all patches, and skip "
+                         "textures/music already produced by a previous build. This is "
+                         "already the default for the default output path; use this flag "
+                         "to opt in for a custom --out too.")
+    ap.add_argument("--clean", action="store_true",
+                    help="Force a full clean rebuild (wipe the output folder first), "
+                         "even when a previous build exists at the default path.")
     args = ap.parse_args()
 
     src = Path(os.path.abspath(os.path.expanduser(args.src)))
-    out = Path(os.path.abspath(os.path.expanduser(args.out)))
+    out_is_default = args.out is None
+    out = (REPO / "build" / "chromium-port") if out_is_default \
+        else Path(os.path.abspath(os.path.expanduser(args.out)))
     if not src.exists():
         fail("--src path does not exist: %s" % src)
 
@@ -575,9 +584,13 @@ def main():
 
     prog = Progress()
 
-    incr = args.incremental and out.exists()
+    # Incremental by default when the default output path already holds a build;
+    # also honoured for a custom --out via --incremental. --clean always forces
+    # a full rebuild.
+    incr = (not args.clean) and out.exists() and (args.incremental or out_is_default)
     if incr:
-        info("Incremental build: reusing %s (copying only changed files)." % out)
+        info("Incremental build: reusing %s (copying only changed files; "
+             "--clean forces a full rebuild)." % out)
 
     prog.stage(0); copy_original(app_root, out, prog, incr); prog.done_stage()
     prog.stage(1); apply_overlay(out, prog); prog.done_stage()

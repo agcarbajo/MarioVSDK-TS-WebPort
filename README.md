@@ -72,6 +72,13 @@ The build will:
 5. extract the per‑world level‑select music and the game icon with ffmpeg
    (if available).
 
+**Incremental rebuilds:** when you build to the default `build/chromium-port`
+and a previous build is already there, the build is **incremental** by default —
+it copies only changed game files, always re‑applies the patches and overlay,
+and reuses textures/music already produced. This makes repeated rebuilds take a
+couple of seconds instead of minutes. Pass `--clean` to force a full rebuild, or
+`--incremental` to opt in for a custom `--out`.
+
 ### Optional: standalone desktop app
 
 Add `--package` to also bundle the built game **and** a host into a
