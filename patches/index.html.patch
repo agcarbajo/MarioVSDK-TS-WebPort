@@ -188,8 +188,8 @@ diff --git a/index.html b/index.html
  		</style>
 +
 +		<script type="text/javascript">
-+			window.__chromiumPortBuild = 'community-1_0_0b2-20260629';
-+			window.__chromiumPortPortVersion = '1.0.0 beta 2';
++			window.__chromiumPortBuild = 'community-1_0_0b3-20260629';
++			window.__chromiumPortPortVersion = '1.0.0 beta 3';
 +			window.__chromiumPortVersion = ((new URLSearchParams(window.location.search).get('v') || 'stable') + '-' + window.__chromiumPortBuild);
 +			window.__chromiumPortSimpleBackgrounds = true;
 +			window.__chromiumPortLoadTvAssets = (function () {

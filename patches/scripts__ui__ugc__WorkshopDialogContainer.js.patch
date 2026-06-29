@@ -1,7 +1,72 @@
 diff --git a/scripts/ui/ugc/WorkshopDialogContainer.js b/scripts/ui/ugc/WorkshopDialogContainer.js
 --- a/scripts/ui/ugc/WorkshopDialogContainer.js
 +++ b/scripts/ui/ugc/WorkshopDialogContainer.js
-@@ -342,6 +342,33 @@
+@@ -189,11 +189,20 @@
+             post.active = true;
+ 
+             if (post.shared) {
+-            } else {
++                // A published level. Open the detail (reusing the level-info
++                // layout) and ask the server for up-to-date info (the initial
++                // comment, stars, downloads). If the server is unreachable, fall
++                // back to the initial comment saved locally (post.body / memo).
+                 this._layoutTVPanes.lvldeet_lvlname.setText(post.levelName);
+-
+                 this.requestUIStateSignal.dispatch('WorkshopDialog', 'MyLevelUnsharedDetail');
+                 this.requestHandlerActionSignal.dispatch('_createSnapshot', post.levelMapDef, this._snapshotCallback);
++                this.tempLock(25);
++                this._refreshSharedLevelInfo(post);
++            } else {
++                this._layoutTVPanes.lvldeet_lvlname.setText(post.levelName);
++
++                this.requestUIStateSignal.dispatch('WorkshopDialog', 'MyLevelUnsharedDetail');
++                this.requestHandlerActionSignal.dispatch('_createSnapshot', post.levelMapDef, this._snapshotCallback);
+ 
+                 this.tempLock(25);
+             }
+@@ -202,6 +211,30 @@
+             this.requestUIStateSignal.dispatch('Factory', 'Locked');
+ 
+             ui.ugc.isLevelDetailsDialogOpen = true;
++        };
++
++        WorkshopDialogContainer.prototype._refreshSharedLevelInfo = function (post) {
++            // Ask the server for the published level's current info. The detail
++            // already shows the locally-saved initial comment (post.body); here we
++            // just refresh it from the server when reachable. Failures are ignored
++            // so the local fallback stands.
++            var panes = this._layoutTVPanes;
++            try {
++                var C = window.ChromiumPortCommunity;
++                if (post && post.postID && C && C.rest && C.rest.nativeGetLevel) {
++                    C.rest.nativeGetLevel(post.postID).then(function (info) {
++                        try {
++                            if (!info) return;
++                            if (typeof info.body === 'string' && info.body) {
++                                post.body = info.body;
++                                if (panes.lvldeet_postText) {
++                                    panes.lvldeet_postText.setText(lib.util.clampComment(info.body));
++                                }
++                            }
++                        } catch (e) {}
++                    }).catch(function () {});
++                }
++            } catch (e) {}
+         };
+ 
+         WorkshopDialogContainer.prototype._fillPostDetails = function (snapCanvas, levelWidth, levelHeight) {
+@@ -316,7 +349,9 @@
+ 
+             var profile = pt.storage.getWorkshopProfile();
+             var btn = lib.util.LayoutUtil.findButton('selfA_share', this._allButtons);
+-            if (post.tested && !ui.ugc.offlineMode && !vsm.miiverseBlocked && (profile.levelsSharedCount < pt.ugc.MAX_SHARE_COUNT)) {
++            // Already-published levels must not offer "share" again (it would
++            // create a duplicate post on the server).
++            if (post.tested && !post.shared && !ui.ugc.offlineMode && !vsm.miiverseBlocked && (profile.levelsSharedCount < pt.ugc.MAX_SHARE_COUNT)) {
+                 btn.enable();
+             } else {
+                 btn.disable();
+@@ -342,6 +377,33 @@
          };
  
          WorkshopDialogContainer.prototype._beginShare = function () {
@@ -35,7 +100,7 @@ diff --git a/scripts/ui/ugc/WorkshopDialogContainer.js b/scripts/ui/ugc/Workshop
              this.lock();
  
              var msg = pt.asset.messageStudioData.getText('msg_post_warning');
-@@ -358,12 +385,20 @@
+@@ -358,12 +420,20 @@
              var body = null;
              var memo = null;
  
