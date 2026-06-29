@@ -370,7 +370,18 @@
             blobToB64(uploadPost && uploadPost.appData),
             blobToB64(uploadPost && uploadPost.screenshot)
         ]).then(function (r) {
-            var done = function () { fire(mv, "uploadPostSuccess", { postID: postID, uploadResult: {} }); };
+            // The game reads the new post's id/body/memo from this upload result
+            // (MiiverseController.getUploadPostResult -> the workshop self-view),
+            // so it must carry them. Without it the local post has no postID (the
+            // star/comment fetch is skipped) and no body/memo (the OP shows black).
+            var uploadResult = {
+                id: postID,
+                body: initial.text || "",
+                hasBodyText: !!initial.text,
+                miiExpression: 0,
+                memo: initial.memo ? makeImg(initial.memo) : null
+            };
+            var done = function () { fire(mv, "uploadPostSuccess", { postID: postID, uploadResult: uploadResult }); };
             if (ready()) {
                 // The initial comment IS the post's own message (the "OP"), like
                 // Miiverse: text -> post body, drawing -> post memo. It must NOT be
