@@ -1,0 +1,55 @@
+diff --git a/scripts/ui/ugc/WorkshopDialogContainer.js b/scripts/ui/ugc/WorkshopDialogContainer.js
+--- a/scripts/ui/ugc/WorkshopDialogContainer.js
++++ b/scripts/ui/ugc/WorkshopDialogContainer.js
+@@ -342,6 +342,24 @@
+         };
+ 
+         WorkshopDialogContainer.prototype._beginShare = function () {
++            // Every published level carries an initial comment. Show the custom
++            // composer first (like the real game's Miiverse post step); only
++            // publish once the player confirms it. Cancelling aborts the publish.
++            var self = this;
++            if (window.ChromiumPortCommentUI && window.ChromiumPortCommentUI.openCompose) {
++                window.ChromiumPortCommentUI.openCompose(
++                    function (result) {
++                        window.__chromiumPendingInitialComment = result || { text: "", memo: "" };
++                        self._doBeginShare();
++                    },
++                    function () { /* cancelled: do not publish */ }
++                );
++                return;
++            }
++            this._doBeginShare();
++        };
++
++        WorkshopDialogContainer.prototype._doBeginShare = function () {
+             this.lock();
+ 
+             var msg = pt.asset.messageStudioData.getText('msg_post_warning');
+@@ -358,12 +376,20 @@
+             var body = null;
+             var memo = null;
+ 
+-            var uploadPost = pt.ugc.ugcManager.getSharedStash().getLastMiiverseUploadPost();
+-            if (uploadPost) {
+-                if (uploadPost.hasBodyText) {
+-                    body = uploadPost.body;
+-                } else {
+-                    memo = uploadPost.memo;
++            // Prefer the comment captured by the custom composer (the initial
++            // comment). Its drawing memo (if any) is forwarded to the server by
++            // the community-net bridge; here we just carry the body text.
++            var pending = window.__chromiumPendingInitialComment;
++            if (pending && pending.text) {
++                body = pending.text;
++            } else {
++                var uploadPost = pt.ugc.ugcManager.getSharedStash().getLastMiiverseUploadPost();
++                if (uploadPost) {
++                    if (uploadPost.hasBodyText) {
++                        body = uploadPost.body;
++                    } else {
++                        memo = uploadPost.memo;
++                    }
+                 }
+             }
+ 

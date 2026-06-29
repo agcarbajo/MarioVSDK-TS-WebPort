@@ -113,8 +113,9 @@
         try { global.blockInput = false; } catch (e) {}
     }
 
-    function open(postID, onPosted) {
-        if (!postID) return;
+    function open(postID, onPosted, opts) {
+        opts = opts || {};
+        if (!opts.compose && !postID) return;
         injectStyles();
         close();
 
@@ -129,7 +130,7 @@
         overlay.id = OVERLAY_ID;
         overlay.innerHTML =
             '<div class="cwc-box" role="dialog" aria-modal="true">' +
-              '<div class="cwc-head">Comentar<button class="cwc-x" title="Cerrar">&times;</button></div>' +
+              '<div class="cwc-head">' + esc(opts.title || "Comentar") + '<button class="cwc-x" title="Cerrar">&times;</button></div>' +
               '<div class="cwc-body">' +
                 '<div class="cwc-card">' +
                   '<div class="cwc-row">' +
@@ -262,8 +263,9 @@
         canvas.addEventListener("touchstart", down); canvas.addEventListener("touchmove", move);
         canvas.addEventListener("touchend", up); canvas.addEventListener("touchcancel", up);
 
-        q('[data-act="cancel"]').onclick = function () { close(); };
-        overlay.querySelector(".cwc-x").onclick = function () { close(); };
+        var doCancel = function () { close(); if (opts.compose && typeof opts.onCancel === "function") opts.onCancel(); };
+        q('[data-act="cancel"]').onclick = doCancel;
+        overlay.querySelector(".cwc-x").onclick = doCancel;
 
         q('[data-act="post"]').onclick = function () {
             var text = (textArea.value || "").trim();
@@ -276,6 +278,13 @@
                 memo = out.toDataURL("image/png");
             }
             if (!text && !memo) { setStatus("Escribe un comentario o haz un dibujo.", true); return; }
+            // Compose mode: hand the composed comment back instead of posting it
+            // (used for a level's initial comment, captured before publishing).
+            if (opts.compose) {
+                close();
+                if (typeof opts.onSubmit === "function") opts.onSubmit({ text: text, memo: memo });
+                return;
+            }
             var btn = this; btn.disabled = true; setStatus("Publicando…", false);
             var rest; try { rest = global.ChromiumPortCommunity.rest; } catch (e) {}
             if (!rest) { setStatus("No conectado al servidor.", true); btn.disabled = false; return; }
@@ -286,5 +295,11 @@
         };
     }
 
-    global.ChromiumPortCommentUI = { open: open, close: close };
+    // Compose-only: show the composer to capture an initial comment for a level
+    // being published. Calls onSubmit({text, memo}) on Publish, onCancel on close.
+    function openCompose(onSubmit, onCancel, title) {
+        open(null, null, { compose: true, onSubmit: onSubmit, onCancel: onCancel, title: title || "Comentario del nivel" });
+    }
+
+    global.ChromiumPortCommentUI = { open: open, openCompose: openCompose, close: close };
 }(window));

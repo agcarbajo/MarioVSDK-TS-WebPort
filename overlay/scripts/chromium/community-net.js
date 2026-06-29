@@ -202,11 +202,19 @@
             hasBodyText: !!l.body,
             body: l.body || "",
             hasMemo: false,
+            // When the level's initial comment is a drawing (no body text), the
+            // detail view shows post.memo as an image instead of the body text.
+            memo: l.memo ? makeImg(avatarFullUrl(l.memo)) : null,
             renderMemo: function () {},
             thumbnailSnapshot: l.screenshot ? b64ToBlob(l.screenshot) : null,
             tested: true,
             shared: true
         };
+    }
+    function makeImg(url) {
+        var img = new Image();
+        if (url) { img.crossOrigin = "anonymous"; img.src = url; }
+        return img;
     }
     function buildRawComment(c) {
         // Preferred: a hand-drawn memo (320x120) that already composes freehand
@@ -319,6 +327,11 @@
         var postID = "post-" + (++postSeq) + "-" + Date.now();
         var dataIDs = pendingDataIDs.slice();
         pendingDataIDs = [];
+        // The initial comment captured by the composer before publishing (text +
+        // optional drawing). Used as the post's body / memo.
+        var initial = global.__chromiumPendingInitialComment || {};
+        global.__chromiumPendingInitialComment = null;
+        var body = (initial.text || (uploadPost && uploadPost.body) || "").toString();
         Promise.all([
             blobToB64(uploadPost && uploadPost.appData),
             blobToB64(uploadPost && uploadPost.screenshot)
@@ -327,8 +340,9 @@
             if (ready()) {
                 rest().nativeCreatePost({
                     postID: postID,
-                    title: (uploadPost && uploadPost.body) || "Nivel",
-                    body: (uploadPost && uploadPost.body) || "",
+                    title: body || "Nivel",
+                    body: body,
+                    memo: initial.memo || "",
                     communityType: communityIdToType(uploadPost && uploadPost.communityID),
                     appData: r[0], screenshot: r[1],
                     primaryID: dataIDs[0] || "", secondaryID: dataIDs[1] || ""
