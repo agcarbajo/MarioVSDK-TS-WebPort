@@ -49,6 +49,26 @@
   .kv span:nth-child(odd){ color:var(--mut); }
   .cmt { border-top:1px solid var(--line); padding:8px 0; display:flex; gap:10px; align-items:center; }
   .cmt img { width:96px; height:36px; object-fit:contain; background:#fff; border-radius:6px; }
+  .muted { color:var(--mut); }
+  .cmt-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
+  .viewtoggle { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
+  .viewtoggle button { border:0; border-radius:0; background:#27314e; padding:6px 12px; }
+  .viewtoggle button.active { background:var(--acc); color:#1a1300; font-weight:700; }
+  .cmt-listv { display:flex; flex-direction:column; gap:10px; }
+  .cmt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
+  .cmt-card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; gap:12px; }
+  .cmt-grid .cmt-card { flex-direction:column; }
+  .cmt-card .cmt-art { width:120px; height:48px; object-fit:contain; background:#fff; border-radius:8px; flex:0 0 auto; cursor:pointer; }
+  .cmt-grid .cmt-card .cmt-art { width:100%; height:120px; }
+  .cmt-card .cmt-art.stamp { display:flex; align-items:center; justify-content:center; font-size:28px; cursor:default; }
+  .cmt-card .cmt-body { flex:1; min-width:0; }
+  .cmt-head { display:flex; align-items:center; gap:8px; }
+  .cmt-ava { width:28px; height:28px; border-radius:50%; object-fit:cover; background:#0c1120; flex:0 0 auto; }
+  .cmt-ava.ph { background:#2a3350; }
+  .cmt-text { margin:6px 0; word-break:break-word; }
+  .cmt-meta { color:var(--mut); font-size:12px; }
+  .cmt-acts { display:flex; gap:6px; flex-wrap:wrap; align-items:flex-start; }
+  .cmt-grid .cmt-acts { justify-content:flex-end; }
 </style>
 </head>
 <body>
@@ -62,6 +82,7 @@ const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&
 const dt = t => new Date(t).toLocaleString();
 let data = {users:[],levels:[],comments:[]};
 let tab = 'levels';
+let commentView = localStorage.getItem('mvdk_admin_cmtview') || 'list';
 
 async function load(){
   const r = await api('/api/admin/overview');
@@ -99,7 +120,7 @@ function renderList(){
     data.levels.forEach(l=>{ h+=`<div class="card ${l.hidden?'hidden-row':''}">
       <img class="thumb" src="${l.thumbnail||''}" onerror="this.style.visibility='hidden'">
       <div class="meta click" onclick="openLevel('${l.id}')"><b>${esc(l.title)}</b>${l.official?'<span class="pill official">OFICIAL</span>':''}${l.hidden?'<span class="pill">hidden</span>':''}
-        <small>by ${esc(l.authorName)} · ⭐ ${l.stars} · 🎁 ${l.tips||0} · ⬇ ${l.downloads} · 💬 ${l.comments} · ${dt(l.createdAt)}</small>
+        <small>by ${esc(l.authorName)} · 👍 ${l.stars} likes · ⭐ ${l.tips||0} estrellas · ⬇ ${l.downloads} · 💬 ${l.comments} · ${dt(l.createdAt)}</small>
         ${l.params?`<small>${l.params.multiDoor?'multi-door':(l.params.doors||1)+' door'} · meta ${l.params.width}×${l.params.height} · ${esc(l.params.theme||'')}</small>`:''}</div>
       <div class="acts">
         <button class="gold ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${l.official?'★ Official':'Make official'}</button>
@@ -107,13 +128,33 @@ function renderList(){
         <button onclick="hideLevel('${l.id}',${!l.hidden})">${l.hidden?'Unhide':'Hide'}</button>
         <button class="danger" onclick="delLevel('${l.id}')">Delete</button></div></div>`; });
   } else if(tab==='comments'){
-    if(!data.comments.length) h='<div class="empty">No comments yet.</div>';
-    data.comments.forEach(c=>{ h+=`<div class="card ${c.hidden?'hidden-row':''}">
-      ${c.memo?`<img class="memo" src="${c.memo}" onclick="viewMemo('${c.memo}')">`:(c.stamp?`<span class="pill">🔖 sello</span>`:'')}
-      <div class="meta"><b>${esc(c.userName)}</b>${c.hidden?'<span class="pill">hidden</span>':''}
-        <small>${c.text?esc(c.text):(c.memo?'<i>(dibujo)</i>':(c.stamp?'<i>(sello)</i>':''))}</small><small>on level ${esc(c.levelId)} · ${dt(c.createdAt)}</small></div>
-      <div class="acts"><button onclick="hideComment('${c.id}',${!c.hidden})">${c.hidden?'Unhide':'Hide'}</button>
-        <button class="danger" onclick="delComment('${c.id}')">Delete</button></div></div>`; });
+    h += `<div class="cmt-toolbar">
+      <span class="muted">${data.comments.length} comment${data.comments.length===1?'':'s'}</span>
+      <span class="viewtoggle">
+        <button class="${commentView==='list'?'active':''}" onclick="setCmtView('list')">☰ List</button>
+        <button class="${commentView==='grid'?'active':''}" onclick="setCmtView('grid')">▦ Grid</button>
+      </span></div>`;
+    if(!data.comments.length){ h+='<div class="empty">No comments yet.</div>'; }
+    else {
+      const card = c => {
+        const ava = c.userAvatar ? `<img class="cmt-ava" src="${c.userAvatar}" onerror="this.style.visibility='hidden'">` : `<div class="cmt-ava ph"></div>`;
+        const visual = c.memo ? `<img class="cmt-art" src="${c.memo}" onclick="viewMemo('${c.memo}')" title="Ver dibujo">`
+                       : (c.stamp ? `<div class="cmt-art stamp">🔖</div>` : '');
+        const txt = c.text ? esc(c.text) : (c.memo ? '<i class="muted">dibujo</i>' : (c.stamp ? '<i class="muted">sello</i>' : '<i class="muted">—</i>'));
+        return `<div class="cmt-card ${c.hidden?'hidden-row':''}">
+          ${visual||''}
+          <div class="cmt-body">
+            <div class="cmt-head">${ava}<b>${esc(c.userName)}</b>${c.hidden?'<span class="pill">hidden</span>':''}</div>
+            <div class="cmt-text">${txt}</div>
+            <div class="cmt-meta">en <b>${esc(c.levelTitle||c.levelId)}</b> · ${dt(c.createdAt)}</div>
+          </div>
+          <div class="cmt-acts">
+            <button onclick="hideComment('${c.id}',${!c.hidden})">${c.hidden?'Unhide':'Hide'}</button>
+            <button class="danger" onclick="delComment('${c.id}')">Delete</button>
+          </div></div>`;
+      };
+      h += `<div class="${commentView==='grid'?'cmt-grid':'cmt-listv'}">` + data.comments.map(card).join('') + `</div>`;
+    }
   } else {
     if(!data.users.length) h='<div class="empty">No users yet.</div>';
     data.users.forEach(usr=>{ h+=`<div class="card">
@@ -125,6 +166,7 @@ function renderList(){
   }
   el.innerHTML = h;
 }
+window.setCmtView = (v)=>{ commentView=v; localStorage.setItem('mvdk_admin_cmtview',v); renderList(); };
 function closeModal(){ $('#modal').innerHTML=''; }
 window.viewMemo = (src)=>{ $('#modal').innerHTML=`<div class="modal-bg" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()"><button class="close" onclick="closeModal()">✕</button><h2>Comentario (dibujo / sello)</h2><img class="preview" style="image-rendering:pixelated" src="${src}"></div></div>`; };
 window.openLevel = async (id)=>{
@@ -143,8 +185,8 @@ window.openLevel = async (id)=>{
       <span>Puntos meta (estrella)</span><span>${p.goalScore!=null?p.goalScore:'—'}</span>
       <span>Dimensiones</span><span>${p.width?`${p.width} × ${p.height}`:'—'}</span>
       <span>Tema</span><span>${esc(p.theme||'—')}</span>
-      <span>Estrellas (mola)</span><span>${l.stars}</span>
-      <span>Regalos (estrellas)</span><span>${l.tips||0}</span>
+      <span>👍 Likes (mola)</span><span>${l.stars}</span>
+      <span>⭐ Estrellas regaladas</span><span>${l.tips||0}</span>
       <span>Descargas</span><span>${l.downloads||0}</span>
       <span>Data IDs</span><span>${esc(l.primaryID||'—')}${l.secondaryID?(' / '+esc(l.secondaryID)):''}</span>
       <span>Publicado</span><span>${dt(l.createdAt)}</span>

@@ -20,7 +20,7 @@ const crypto = require("crypto");
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 const SERVER_NAME = process.env.SERVER_NAME || "MvDK Community Server";
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 
 const DATA_DIR = path.join(__dirname, "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
@@ -303,8 +303,11 @@ route("POST", "/api/native/levels", async (req, res) => {
     const lid = b.postID;
     if (b.appData) writeB64(path.join(UPLOAD_DIR, lid + ".appdata"), b.appData);
     if (b.screenshot) writeB64(path.join(UPLOAD_DIR, lid + ".thumb.png"), b.screenshot);
+    // The initial-comment drawing (a small PNG) shown when the level has no body text.
+    let hasMemo = false;
+    if (b.memo && saveDataUrlImage(b.memo, path.join(UPLOAD_DIR, lid + ".memo.png"))) hasMemo = true;
     db.levels[lid] = {
-        id: lid, native: true,
+        id: lid, native: true, memo: hasMemo,
         title: (b.title || b.body || "Nivel").toString().slice(0, 64),
         body: (b.body || "").toString().slice(0, 280),
         authorId: u.id, authorName: u.name,
@@ -326,7 +329,13 @@ route("PUT", "/api/native/datastore/:dataID", async (req, res, params) => {
     // Attach parsed map params to the owning level (matched by primary data id).
     if (b.params) {
         const lvl = Object.values(db.levels).find((l) => l.primaryID === params.dataID);
-        if (lvl) { lvl.params = b.params; saveDb(); }
+        if (lvl) {
+            lvl.params = b.params;
+            // The real level name lives in the map (params.name); the post body
+            // is the comment. Use the level name as the level's display title.
+            if (b.params.name) lvl.title = String(b.params.name).slice(0, 64);
+            saveDb();
+        }
     }
     ok(res, { ok: true });
 });
@@ -350,6 +359,7 @@ route("GET", "/api/native/levels", async (req, res, params, query) => {
         authorAvatar: (db.users[l.authorId] && db.users[l.authorId].avatar) ? "/avatars/" + l.authorId + ".png" : null,
         tips: l.tips || 0, tipped: !!(u && (l.tippedBy || []).indexOf(u.id) !== -1),
         mine: !!(u && l.authorId === u.id), official: !!l.official, params: l.params || null,
+        memo: l.memo ? "/levels/" + l.id + ".memo.png" : null,
         appData: readB64(path.join(UPLOAD_DIR, l.id + ".appdata")),
         screenshot: l.thumbnail ? readB64(path.join(UPLOAD_DIR, l.id + ".thumb.png")) : null,
     }));
@@ -390,7 +400,7 @@ route("DELETE", "/api/native/levels/:id", async (req, res, params) => {
     for (const dsid of [l.primaryID, l.secondaryID]) {
         if (dsid) { try { fs.unlinkSync(path.join(UPLOAD_DIR, "ds-" + dsid + ".bin")); } catch (e) {} }
     }
-    for (const ext of [".appdata", ".thumb.png"]) { try { fs.unlinkSync(path.join(UPLOAD_DIR, l.id + ext)); } catch (e) {} }
+    for (const ext of [".appdata", ".thumb.png", ".memo.png"]) { try { fs.unlinkSync(path.join(UPLOAD_DIR, l.id + ext)); } catch (e) {} }
     for (const cid of Object.keys(db.comments)) if (db.comments[cid].levelId === l.id) delete db.comments[cid];
     delete db.levels[params.id];
     saveDb();
@@ -410,7 +420,9 @@ route("GET", "/api/admin/overview", async (req, res) => {
         comments: Object.values(db.comments).sort((a, b) => b.createdAt - a.createdAt)
             .map((c) => ({ id: c.id, levelId: c.levelId, userId: c.userId, userName: c.userName,
                            text: c.text, createdAt: c.createdAt, hidden: !!c.hidden,
-                           stamp: c.stamp || null, memo: c.memo ? "/comments/" + c.id + ".png" : null })),
+                           stamp: c.stamp || null, memo: c.memo ? "/comments/" + c.id + ".png" : null,
+                           userAvatar: (db.users[c.userId] && db.users[c.userId].avatar) ? "/avatars/" + c.userId + ".png" : null,
+                           levelTitle: (db.levels[c.levelId] && db.levels[c.levelId].title) || c.levelId })),
     });
 });
 route("POST", "/api/admin/levels/:id/hide", async (req, res, params) => {
