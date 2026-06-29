@@ -217,11 +217,26 @@
             platformType: l.official ? 3 : 1,
             hasBodyText: !!l.body,
             body: l.body || "",
-            hasMemo: false,
             // When the level's initial comment is a drawing (no body text), the
-            // detail view shows post.memo as an image instead of the body text.
-            memo: l.memo ? makeImg(avatarFullUrl(l.memo)) : null,
-            renderMemo: function () {},
+            // detail view renders post.memo onto the post's memo canvas. The data
+            // provider only does this when hasMemo is true and renderMemo draws.
+            hasMemo: !!l.memo,
+            memo: null,
+            renderMemo: function (target) {
+                if (!l.memo) return;
+                try {
+                    var ctx = (target && target.getContext) ? target.getContext("2d")
+                            : (target && target.drawImage ? target : null);
+                    if (!ctx) return;
+                    var cw = (ctx.canvas && ctx.canvas.width) || 320,
+                        ch = (ctx.canvas && ctx.canvas.height) || 120;
+                    var img = new Image(); img.crossOrigin = "anonymous";
+                    img.onload = function () {
+                        try { ctx.clearRect(0, 0, cw, ch); ctx.drawImage(img, 0, 0, cw, ch); } catch (e) {}
+                    };
+                    img.src = avatarFullUrl(l.memo);
+                } catch (e) {}
+            },
             thumbnailSnapshot: l.screenshot ? b64ToBlob(l.screenshot) : null,
             tested: true,
             shared: true
