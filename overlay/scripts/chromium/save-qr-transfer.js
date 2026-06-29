@@ -3,7 +3,12 @@
 
     var QR_PREFIX = "MVDKTS";
     var QR_VERSION = "3";
-    var CHUNK_SIZE = 320;
+    // Bytes of base64 payload per QR. The data is already gzipped; packing more
+    // per code (paired with the lower "L" error-correction level in makeQrSvg)
+    // keeps the QR version/scannability similar while roughly halving how many
+    // codes the transfer needs. Per-chunk checksums + the full-payload hash catch
+    // any misread, and the codes loop so a bad frame is just re-read next cycle.
+    var CHUNK_SIZE = 700;
     var FRAME_MS = 1250;
     var COMPACT_MAGIC = "MVDKQR3";
     var overlay = null;
@@ -396,7 +401,7 @@
 
     function makeQrSvg(payload) {
         if (!global.qrcode) throw new Error("qrcode generator missing");
-        var qr = qrcode(0, "Q");
+        var qr = qrcode(0, "L");
         qr.addData(payload, "Byte");
         qr.make();
         return qr.createSvgTag({ cellSize: 5, margin: 12, scalable: true });
