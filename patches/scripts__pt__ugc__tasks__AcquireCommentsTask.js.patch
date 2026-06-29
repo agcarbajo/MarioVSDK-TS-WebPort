@@ -1,0 +1,16 @@
+diff --git a/scripts/pt/ugc/tasks/AcquireCommentsTask.js b/scripts/pt/ugc/tasks/AcquireCommentsTask.js
+--- a/scripts/pt/ugc/tasks/AcquireCommentsTask.js
++++ b/scripts/pt/ugc/tasks/AcquireCommentsTask.js
+@@ -71,6 +71,12 @@
+                         var postItem = postCache.getItem(this.currPostIndex);
+                         var miiversePost = postItem.getMiiversePost();
+                         this._postID = miiversePost ? miiversePost.id : postItem.getSavedPostID();
++                        // Workshop self-view: the Shared post-cache item may not have
++                        // its saved postID restored after a reload, but the currently
++                        // open post does. Fall back to it so comments still load.
++                        if (!this._postID && ui.ugc.currentPost && ui.ugc.currentPost.postID) {
++                            this._postID = ui.ugc.currentPost.postID;
++                        }
+ 
+                         var commentSearchParam = new nwf.mv.MiiverseCommentSearchParam();
+                         commentSearchParam.postID = this._postID;

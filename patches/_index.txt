@@ -42,6 +42,7 @@ scripts__pt__map__tile__GroundTile.js.patch  ->  scripts/pt/map/tile/GroundTile.
 scripts__pt__map__tile__MagnetTile.js.patch  ->  scripts/pt/map/tile/MagnetTile.js
 scripts__pt__ugc__dataproviders__LocalDataProvider.js.patch  ->  scripts/pt/ugc/dataproviders/LocalDataProvider.js
 scripts__pt__ugc__sequences__SyncCommunitySequence.js.patch  ->  scripts/pt/ugc/sequences/SyncCommunitySequence.js
+scripts__pt__ugc__tasks__AcquireCommentsTask.js.patch  ->  scripts/pt/ugc/tasks/AcquireCommentsTask.js
 scripts__pt__ugc__tasks__AppendTipTask.js.patch  ->  scripts/pt/ugc/tasks/AppendTipTask.js
 scripts__ui__GameUI.js.patch  ->  scripts/ui/GameUI.js
 scripts__ui__LoadingScreen.js.patch  ->  scripts/ui/LoadingScreen.js
