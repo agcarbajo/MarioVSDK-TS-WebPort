@@ -20,7 +20,7 @@ const crypto = require("crypto");
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 const SERVER_NAME = process.env.SERVER_NAME || "MvDK Community Server";
-const VERSION = "0.3.1";
+const VERSION = "1.0.0";
 
 const DATA_DIR = path.join(__dirname, "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
