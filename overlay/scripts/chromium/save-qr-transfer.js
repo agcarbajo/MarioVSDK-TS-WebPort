@@ -83,7 +83,7 @@
         style.id = "chromium-port-qr-transfer-style";
         style.textContent = [
             "#chromium-port-qr-transfer{position:fixed;z-index:1000005;inset:0;background:rgba(0,12,28,.82);display:flex;align-items:center;justify-content:center;font-family:Arial,sans-serif;pointer-events:auto;touch-action:none}",
-            "#chromium-port-qr-transfer .qr-panel{width:min(96vw,920px);max-height:96vh;overflow:auto;border:4px solid #031c31;border-radius:9px;background:linear-gradient(#08a9ef,#006bc2);box-shadow:0 0 0 3px #49d6ff inset,0 10px 28px rgba(0,0,0,.55);padding:18px;text-align:center;color:#fff}",
+            "#chromium-port-qr-transfer .qr-panel{width:min(96vw,920px);max-height:96vh;overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;border:4px solid #031c31;border-radius:9px;background:linear-gradient(#08a9ef,#006bc2);box-shadow:0 0 0 3px #49d6ff inset,0 10px 28px rgba(0,0,0,.55);padding:18px;text-align:center;color:#fff}",
             "#chromium-port-qr-transfer .qr-title{font-weight:900;font-size:clamp(24px,4vw,36px);text-shadow:2px 2px 0 #053a7a;margin:0 0 8px}",
             "#chromium-port-qr-transfer .qr-status{font-weight:900;font-size:clamp(16px,2.7vw,24px);line-height:1.25;text-shadow:1px 1px 0 #053a7a;margin:8px 0 12px;color:#fff7a8}",
             "#chromium-port-qr-transfer .qr-box{display:inline-flex;align-items:center;justify-content:center;min-width:min(86vw,560px);min-height:min(86vw,560px);padding:14px;border:4px solid #09284a;border-radius:8px;background:#fff;box-shadow:0 4px 0 #001b31}",

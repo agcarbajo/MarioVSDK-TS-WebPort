@@ -131,7 +131,7 @@
         css.textContent =
             "#" + OVERLAY_ID + "{position:fixed;inset:0;z-index:2000000;display:flex;align-items:center;justify-content:center;" +
             "background:rgba(4,28,60,.55);font-family:Arial,Helvetica,sans-serif;}" +
-            "#" + OVERLAY_ID + " .cw-box{width:min(520px,92vw);max-height:92vh;overflow:auto;border-radius:18px;" +
+            "#" + OVERLAY_ID + " .cw-box{width:min(520px,92vw);max-height:92vh;overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;border-radius:18px;" +
             "background:linear-gradient(180deg,#5eb6ff 0%,#90dcff 45%,#65b7ec 100%);" +
             "box-shadow:0 18px 60px rgba(0,0,0,.5);border:4px solid rgba(255,255,255,.7);padding:0;}" +
             "#" + OVERLAY_ID + " .cw-head{display:flex;align-items:center;justify-content:center;position:relative;" +
