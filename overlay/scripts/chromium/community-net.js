@@ -331,6 +331,10 @@
         // optional drawing). Used as the post's body / memo.
         var initial = global.__chromiumPendingInitialComment || {};
         global.__chromiumPendingInitialComment = null;
+        // Fallback level thumbnail captured from the workshop snapshot (the post
+        // itself carries no separate screenshot here). Stored as base64.
+        var pendingShot = (global.__chromiumPendingScreenshot || "").replace(/^data:[^,]+,/, "");
+        global.__chromiumPendingScreenshot = null;
         var body = (initial.text || (uploadPost && uploadPost.body) || "").toString();
         Promise.all([
             blobToB64(uploadPost && uploadPost.appData),
@@ -344,7 +348,7 @@
                     body: body,
                     memo: initial.memo || "",
                     communityType: communityIdToType(uploadPost && uploadPost.communityID),
-                    appData: r[0], screenshot: r[1],
+                    appData: r[0], screenshot: r[1] || pendingShot,
                     primaryID: dataIDs[0] || "", secondaryID: dataIDs[1] || ""
                 }).then(function () { log("level uploaded to server: " + postID); done(); },
                          function (e) { log("native post upload failed: " + e.message); done(); });
