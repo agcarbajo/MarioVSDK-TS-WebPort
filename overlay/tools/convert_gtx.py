@@ -343,12 +343,15 @@ def main():
     args = sys.argv[1:]
     porcelain = False
     jobs = None
+    incremental = False
     explicit = []
     i = 0
     while i < len(args):
         a = args[i]
         if a == "--porcelain":
             porcelain = True
+        elif a == "--incremental":
+            incremental = True
         elif a == "--jobs":
             i += 1
             jobs = int(args[i])
@@ -360,15 +363,41 @@ def main():
 
     OUT.mkdir(parents=True, exist_ok=True)
     paths = [ROOT / x for x in explicit] if explicit else sorted(ROOT.rglob("*.gtx.gz"))
-    total = len(paths)
+
+    manifest_path = OUT / "gtx-manifest.json"
+    manifest = {}
+    # Incremental: a GTX bundle never changes between builds (it comes from the
+    # fixed game files), so any bundle already converted-and-supported in a prior
+    # build can be skipped. Keep its manifest entry and only reconvert the rest.
+    if incremental and manifest_path.exists():
+        try:
+            prev = json.loads(manifest_path.read_text(encoding="utf-8"))
+        except Exception:
+            prev = {}
+        kept = {}
+        todo = []
+        for p in paths:
+            key = p.relative_to(ROOT).as_posix()
+            entry = prev.get(key)
+            if entry and entry.get("supported") and all(
+                    (ROOT / img).exists() for img in entry.get("images", [])):
+                kept[key] = entry
+            else:
+                todo.append(p)
+        manifest.update(kept)
+        skipped = len(kept)
+        paths = todo
+    else:
+        skipped = 0
+
+    total = len(paths) + skipped
 
     if jobs is None:
         jobs = os.cpu_count() or 1
-    jobs = max(1, min(jobs, total or 1))
+    jobs = max(1, min(jobs, len(paths) or 1))
 
-    manifest = {}
     unsupported = []
-    done = 0
+    done = skipped
     start = time.time()
 
     def report():
@@ -391,7 +420,7 @@ def main():
         done += 1
         report()
 
-    if jobs > 1 and total > 1:
+    if jobs > 1 and len(paths) > 1:
         # Convert bundles across CPU cores; each worker decodes one bundle and
         # writes its own PNGs, so there are no write conflicts.
         pool = multiprocessing.Pool(processes=jobs)
@@ -408,12 +437,13 @@ def main():
     if not porcelain and total:
         sys.stdout.write("\n")
 
-    manifest_path = OUT / "gtx-manifest.json"
-    if explicit and manifest_path.exists():
+    if explicit and not incremental and manifest_path.exists():
         merged = json.loads(manifest_path.read_text(encoding="utf-8"))
         merged.update(manifest)
         manifest = merged
-    manifest_path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
+    # sort_keys so the manifest is deterministic regardless of parallel
+    # completion order -> reproducible builds (clean and incremental match).
+    manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True), encoding="utf-8")
 
     if unsupported:
         for item in unsupported:

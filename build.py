@@ -23,6 +23,7 @@ Usage:
 """
 
 import argparse
+import concurrent.futures
 import os
 import re
 import shutil
@@ -128,17 +129,53 @@ def find_app_root(src: Path) -> Path:
          "contains both 'scripts/' and 'audio/') under: %s" % src)
 
 
-def copy_original(app_root: Path, out: Path, prog: Progress):
-    if out.exists():
+def _patched_targets() -> set:
+    """Relative paths (posix) of the game files the patches modify."""
+    targets = set()
+    for patch in PATCHES.glob("*.patch"):
+        m = re.search(rb"^\+\+\+ b/(.+)$", patch.read_bytes(), re.M)
+        if m:
+            targets.add(m.group(1).decode("latin-1").strip())
+    return targets
+
+
+def _copy_workers() -> int:
+    # Copying game files is I/O-bound, so oversubscribe cores a little.
+    return min(16, (os.cpu_count() or 4) * 4)
+
+
+def copy_original(app_root: Path, out: Path, prog: Progress, incremental: bool = False):
+    """Copy the game's app files into the output folder, in parallel.
+
+    With ``incremental`` and an existing output, only new/changed files are
+    copied: a file is recopied if it's missing, if its size/mtime differs, or if
+    it is a patch target (so patches always re-apply to a pristine copy). This
+    makes repeated rebuilds with the same game files much faster."""
+    patched = _patched_targets() if incremental else set()
+    if not incremental and out.exists():
         shutil.rmtree(out)
     files = [p for p in app_root.rglob("*") if p.is_file()]
     total = len(files) or 1
-    for n, src in enumerate(files, 1):
-        dst = out / src.relative_to(app_root)
+
+    def do_copy(src):
+        rel = src.relative_to(app_root).as_posix()
+        dst = out / rel
+        if incremental and dst.exists() and rel not in patched:
+            try:
+                ss = src.stat(); ds = dst.stat()
+                if ss.st_size == ds.st_size and ss.st_mtime <= ds.st_mtime + 1:
+                    return  # unchanged -> skip
+            except OSError:
+                pass
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(src, dst)
-        if n % 40 == 0 or n == total:
-            prog.update(n / total)
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=_copy_workers()) as ex:
+        futs = [ex.submit(do_copy, s) for s in files]
+        for n, f in enumerate(concurrent.futures.as_completed(futs), 1):
+            f.result()
+            if n % 40 == 0 or n == total:
+                prog.update(n / total)
 
 
 def apply_overlay(out: Path, prog: Progress):
@@ -246,17 +283,23 @@ def apply_patches(out: Path, prog: Progress):
              "different version than this port targets (EU)." % len(failed))
 
 
-def convert_textures(out: Path, python: str, prog: Progress):
+def convert_textures(out: Path, python: str, prog: Progress, incremental: bool = False):
     """Run the parallel GTX->PNG converter, streaming its progress.
 
     Returns (warnings, returncode). The converter emits machine-readable
     'PROGRESS done total' lines (one per finished bundle) which drive the
-    progress bar, plus 'WARN ...' lines for unsupported surfaces."""
+    progress bar, plus 'WARN ...' lines for unsupported surfaces.
+
+    With ``incremental`` the converter skips bundles already converted in a
+    previous build (their PNGs never change), reconverting only the rest."""
     script = out / "tools" / "convert_gtx.py"
     if not script.exists():
         fail("convert_gtx.py missing from overlay/tools.")
+    cmd = [python, "-u", str(script), "--porcelain"]
+    if incremental:
+        cmd.append("--incremental")
     proc = subprocess.Popen(
-        [python, "-u", str(script), "--porcelain"],
+        cmd,
         cwd=str(out), stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True)
     warns = []
     other = []
@@ -277,7 +320,15 @@ def convert_textures(out: Path, python: str, prog: Progress):
     return warns, proc.returncode
 
 
-def extract_world_music(out: Path, ffmpeg: str, prog: Progress):
+def extract_world_music(out: Path, ffmpeg: str, prog: Progress, incremental: bool = False):
+    # Incremental: the per-world tracks are derived from the fixed source audio,
+    # so if they all already exist there is nothing to redo.
+    if incremental:
+        outs = [out / "audio" / "sounds" / ("level_select_world_%d.ogg" % w)
+                for w in range(1, WORLD_TRACK_COUNT + 1)]
+        if all(o.exists() for o in outs):
+            prog.update(1.0)
+            return None
     full = out / LEVEL_SELECT_FULL
     if not full.exists() or not ffmpeg:
         prog.update(1.0)
@@ -503,6 +554,11 @@ def main():
                          "the OS webview / browser.")
     ap.add_argument("--app-name", default="MvDK-Tipping-Stars",
                     help="Name for the packaged app/executable (default: MvDK-Tipping-Stars).")
+    ap.add_argument("--incremental", action="store_true",
+                    help="Reuse an existing output folder: copy only changed game "
+                         "files, re-apply all patches, and skip textures/music "
+                         "already produced by a previous build. Much faster for "
+                         "repeated rebuilds with the same game files.")
     args = ap.parse_args()
 
     src = Path(os.path.abspath(os.path.expanduser(args.src)))
@@ -519,12 +575,16 @@ def main():
 
     prog = Progress()
 
-    prog.stage(0); copy_original(app_root, out, prog); prog.done_stage()
+    incr = args.incremental and out.exists()
+    if incr:
+        info("Incremental build: reusing %s (copying only changed files)." % out)
+
+    prog.stage(0); copy_original(app_root, out, prog, incr); prog.done_stage()
     prog.stage(1); apply_overlay(out, prog); prog.done_stage()
     prog.stage(2); apply_patches(out, prog); prog.done_stage()
 
     prog.stage(3)
-    conv_warns, conv_rc = convert_textures(out, python, prog)
+    conv_warns, conv_rc = convert_textures(out, python, prog, incr)
     prog.done_stage()
     if conv_rc != 0 or conv_warns:
         for w in conv_warns:
@@ -534,7 +594,7 @@ def main():
                  "still written.")
 
     prog.stage(4)
-    music_err = extract_world_music(out, ffmpeg, prog)
+    music_err = extract_world_music(out, ffmpeg, prog, incr)
     prog.done_stage()
     if music_err:
         warn(music_err)
