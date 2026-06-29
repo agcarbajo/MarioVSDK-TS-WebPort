@@ -1,0 +1,92 @@
+diff --git a/messageData/playtime.json b/messageData/playtime.json
+--- a/messageData/playtime.json
++++ b/messageData/playtime.json
+@@ -1521,47 +1521,47 @@
+         "btn_miiverse": {
+             "LAYOUT": {
+                 "size": 100,
+-                "text": "Go to Miiverse" 
+-            },
+-            "SOURCE": {
+-                "size": 100,
+-                "text": "" 
+-            },
+-            "US_English": {
+-                "size": 100,
+-                "text": "Go to Miiverse" 
+-            },
+-            "EU_English": {
+-                "size": 100,
+-                "text": "Go to Miiverse" 
+-            },
+-            "EU_German": {
+-                "size": 100,
+-                "text": "Zum Miiverse" 
+-            },
+-            "EU_French": {
+-                "size": 100,
+-                "text": "Miiverse" 
+-            },
+-            "EU_Spanish": {
+-                "size": 100,
+-                "text": "Ir a Miiverse" 
+-            },
+-            "EU_Italian": {
+-                "size": 100,
+-                "text": "Vai a Miiverse" 
+-            },
+-            "JP_Japanese": {
+-                "size": 100,
+-                "text": "Miiverseへ行く" 
+-            },
+-            "US_French": {
+-                "size": 100,
+-                "text": "Miiverse" 
+-            },
+-            "US_Spanish": {
+-                "size": 100,
+-                "text": "Ir a Miiverse" 
++                "text": "Refresh" 
++            },
++            "SOURCE": {
++                "size": 100,
++                "text": "" 
++            },
++            "US_English": {
++                "size": 100,
++                "text": "Refresh" 
++            },
++            "EU_English": {
++                "size": 100,
++                "text": "Refresh" 
++            },
++            "EU_German": {
++                "size": 100,
++                "text": "Aktualisieren" 
++            },
++            "EU_French": {
++                "size": 100,
++                "text": "Actualiser" 
++            },
++            "EU_Spanish": {
++                "size": 100,
++                "text": "Actualizar" 
++            },
++            "EU_Italian": {
++                "size": 100,
++                "text": "Aggiorna" 
++            },
++            "JP_Japanese": {
++                "size": 100,
++                "text": "更新" 
++            },
++            "US_French": {
++                "size": 100,
++                "text": "Actualiser" 
++            },
++            "US_Spanish": {
++                "size": 100,
++                "text": "Actualizar" 
+             } 
+         },
+         "btn_favorite": {

@@ -66,3 +66,5 @@ scripts__ui__ugc__StampContainer.js.patch  ->  scripts/ui/ugc/StampContainer.js
 scripts__ui__ugc__TouchPanelController.js.patch  ->  scripts/ui/ugc/TouchPanelController.js
 scripts__ui__ugc__WorkshopDialogContainer.js.patch  ->  scripts/ui/ugc/WorkshopDialogContainer.js
 scripts__vsm__ViewStateManager.js.patch  ->  scripts/vsm/ViewStateManager.js
+messageData__playtime.json.patch  ->  messageData/playtime.json
+scripts__pt__ugc__UGCPermissionFlow.js.patch  ->  scripts/pt/ugc/UGCPermissionFlow.js

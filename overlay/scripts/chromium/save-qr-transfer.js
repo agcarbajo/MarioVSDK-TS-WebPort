@@ -260,6 +260,21 @@
                 });
             });
         })).then(function () {
+            // Also carry the port's own settings (frame rate, language,
+            // performance mode, and the community server + profile), which live in
+            // localStorage rather than the game save, so they move with the save.
+            try {
+                var snap = {};
+                for (var si = 0; si < localStorage.length; ++si) {
+                    var k = localStorage.key(si);
+                    if (k != null) snap[k] = localStorage.getItem(k);
+                }
+                records.push({
+                    path: "settings/localStorage.json",
+                    type: "application/json",
+                    data: encoder.encode(JSON.stringify(snap))
+                });
+            } catch (e) {}
             var parts = [encoder.encode(COMPACT_MAGIC), writeUint16(records.length)];
             records.sort(function (a, b) {
                 return a.path < b.path ? -1 : a.path > b.path ? 1 : 0;
@@ -316,7 +331,8 @@
             var path = decoder.decode(take(pathLength));
             var type = decoder.decode(take(typeLength));
             var data = take(dataLength);
-            if (!path || path.indexOf("../") !== -1 || path.indexOf("save/") !== 0) {
+            if (!path || path.indexOf("../") !== -1 ||
+                    (path.indexOf("save/") !== 0 && path.indexOf("settings/") !== 0)) {
                 throw new Error("Invalid save path");
             }
             files.push({ path: path, type: type || "application/octet-stream", data: data });
@@ -327,9 +343,21 @@
 
     function importCompactSaveBytes(fs, bytes) {
         var files = readCompactSaveBytes(bytes);
+        // The settings record isn't a game-save file: restore it into localStorage
+        // instead of the virtual filesystem.
+        var saveFiles = files.filter(function (f) { return f.path.indexOf("settings/") !== 0; });
+        var settingsFiles = files.filter(function (f) { return f.path.indexOf("settings/") === 0; });
+        settingsFiles.forEach(function (f) {
+            try {
+                var snap = JSON.parse(new TextDecoder().decode(f.data));
+                Object.keys(snap).forEach(function (k) {
+                    try { localStorage.setItem(k, snap[k]); } catch (e) {}
+                });
+            } catch (e) {}
+        });
         return fs.clearProfile().then(function () {
             var chain = Promise.resolve();
-            files.forEach(function (file) {
+            saveFiles.forEach(function (file) {
                 chain = chain.then(function () {
                     return fs.writeFile(file.path, new Blob([file.data], { type: file.type }));
                 });

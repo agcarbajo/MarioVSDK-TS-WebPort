@@ -68,7 +68,7 @@
         s.id = STYLE_ID;
         s.textContent =
             "#" + OVERLAY_ID + "{position:fixed;inset:0;z-index:2000050;display:flex;align-items:center;justify-content:center;background:rgba(4,28,60,.55);font-family:Arial,Helvetica,sans-serif;}" +
-            "#" + OVERLAY_ID + " .cwc-box{width:min(600px,95vw);max-height:94vh;overflow:auto;border-radius:18px;background:linear-gradient(180deg,#5eb6ff 0%,#90dcff 45%,#65b7ec 100%);box-shadow:0 12px 40px rgba(0,0,0,.5);border:3px solid #fff;}" +
+            "#" + OVERLAY_ID + " .cwc-box{width:min(600px,95vw);max-height:94vh;overflow:auto;touch-action:pan-y;-webkit-overflow-scrolling:touch;border-radius:18px;background:linear-gradient(180deg,#5eb6ff 0%,#90dcff 45%,#65b7ec 100%);box-shadow:0 12px 40px rgba(0,0,0,.5);border:3px solid #fff;}" +
             "#" + OVERLAY_ID + " .cwc-head{display:flex;align-items:center;justify-content:center;position:relative;padding:14px;color:#fff;font-weight:900;font-size:20px;text-shadow:0 2px 0 rgba(0,40,90,.5);}" +
             "#" + OVERLAY_ID + " .cwc-x{position:absolute;right:12px;top:10px;width:34px;height:34px;border-radius:50%;border:2px solid rgba(255,255,255,.8);background:rgba(0,47,108,.5);color:#fff;font-weight:900;cursor:pointer;}" +
             "#" + OVERLAY_ID + " .cwc-body{padding:4px 18px 18px;}" +
@@ -87,7 +87,7 @@
             "#" + OVERLAY_ID + " .cwc-tool.on{border-color:#ff8b21;background:#fff3d6;}" +
             "#" + OVERLAY_ID + " .cwc-swatch{width:24px;height:24px;border-radius:50%;cursor:pointer;border:2px solid #fff;box-shadow:0 0 0 1px #b9c8de;}" +
             "#" + OVERLAY_ID + " .cwc-swatch.on{box-shadow:0 0 0 2px #ff8b21;}" +
-            "#" + OVERLAY_ID + " .cwc-stamps{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:120px;overflow:auto;padding:4px;margin-top:8px;background:#eef3fb;border-radius:8px;}" +
+            "#" + OVERLAY_ID + " .cwc-stamps{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;max-height:120px;overflow:auto;padding:4px;margin-top:8px;background:#eef3fb;border-radius:8px;touch-action:pan-y;-webkit-overflow-scrolling:touch;}" +
             "#" + OVERLAY_ID + " .cwc-stamp{aspect-ratio:1;border-radius:8px;background:#fff;border:2px solid transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;padding:3px;}" +
             "#" + OVERLAY_ID + " .cwc-stamp img{max-width:100%;max-height:100%;}" +
             "#" + OVERLAY_ID + " .cwc-stamp.sel{border-color:#ff8b21;background:#fff3d6;}" +
@@ -232,7 +232,7 @@
         var drawing = false, last = null;
         function placeStamp(p) {
             var img = getStampImage(selectedStamp); if (!img) return;
-            var size = 40;
+            var size = 56;
             try { ctx.drawImage(img, p.x - size / 2, p.y - size / 2, size, size); drawn = true; } catch (e) {}
         }
         function down(e) {
