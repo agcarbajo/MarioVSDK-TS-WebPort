@@ -1,7 +1,7 @@
 diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.js
 --- a/scripts/ui/ugc/DialogContainer.js
 +++ b/scripts/ui/ugc/DialogContainer.js
-@@ -228,9 +228,22 @@
+@@ -228,9 +228,30 @@
  
          DialogContainer.prototype._openComment = function (btn) {
              if (btn.genericButtonAction(false)) {
@@ -16,6 +16,14 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
 +                if (window.ChromiumPortCommentUI && postID) {
 +                    window.ChromiumPortCommentUI.open(postID, function () {
 +                        if (ui.ugc.currentPost) {
++                            // Destroy the cached comments for this post so the list
++                            // is re-downloaded (otherwise GetCommentsAction re-shows
++                            // the stale cache and the new comment only appears after
++                            // a reload).
++                            try {
++                                var sg = pt.ugc.ugcManager && pt.ugc.ugcManager._serviceGroup;
++                                if (sg && sg.destroyCommentCache) sg.destroyCommentCache(ui.ugc.currentPost.postID);
++                            } catch (e) {}
 +                            ui.ugcSignals.clearData.dispatch('comments');
 +                            ui.ugcSignals.getComments.dispatch(ui.ugc.activeFilter, ui.ugc.currentPost.dataIndex);
 +                        }
@@ -27,7 +35,7 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
              }
          };
  
-@@ -429,6 +442,20 @@
+@@ -429,6 +450,20 @@
              }
  
              this._commentPosY = this._gpComments[this._gpComments.length - 1].refreshMain(post);

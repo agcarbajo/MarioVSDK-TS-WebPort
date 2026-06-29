@@ -265,7 +265,9 @@
                     var reader = new lib.util.DataReader(ab);
                     reader.moveOffset(pt.ugc.DATASTORE_LEVEL_INFO_SIZE);
                     var conv = new pt.map.MapBinaryConverter();
-                    conv.validateChecksum(reader);
+                    // toMapDef reads the leading checksum itself; do NOT call
+                    // validateChecksum first or the reader is left misaligned and
+                    // toMapDef returns null (no params/name captured).
                     var mapDef = conv.toMapDef(reader);
                     if (!mapDef || !mapDef.header) { resolve(null); return; }
                     var doors = (mapDef.entities || []).filter(function (e) { return e && e.type === "Door"; }).length;
