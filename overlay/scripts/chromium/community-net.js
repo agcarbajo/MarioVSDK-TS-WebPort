@@ -161,14 +161,27 @@
                 try {
                     var ctx = canvas && canvas.getContext && canvas.getContext("2d");
                     if (!ctx) { done(); return; }
+                    var w = canvas.width, h = canvas.height;
+                    // Clip to a rounded square so the photo sits INSIDE the Mii
+                    // slot's rounded frame (square corners would poke out / look
+                    // pasted on top). Transparent corners let the frame show.
+                    var clip = function () {
+                        var r = Math.round(Math.min(w, h) * 0.14);
+                        ctx.beginPath();
+                        ctx.moveTo(r, 0); ctx.lineTo(w - r, 0); ctx.arcTo(w, 0, w, r, r);
+                        ctx.lineTo(w, h - r); ctx.arcTo(w, h, w - r, h, r);
+                        ctx.lineTo(r, h); ctx.arcTo(0, h, 0, h - r, r);
+                        ctx.lineTo(0, r); ctx.arcTo(0, 0, r, 0, r);
+                        ctx.closePath(); ctx.clip();
+                    };
                     var drawDefault = function () {
-                        try { ctx.clearRect(0, 0, canvas.width, canvas.height); if (global.__chromiumDrawDefaultAvatar) global.__chromiumDrawDefaultAvatar(ctx, canvas.width, canvas.height); } catch (e) {}
+                        try { ctx.clearRect(0, 0, w, h); ctx.save(); clip(); if (global.__chromiumDrawDefaultAvatar) global.__chromiumDrawDefaultAvatar(ctx, w, h); ctx.restore(); } catch (e) {}
                     };
                     if (!avatarUrl) { drawDefault(); done(); return; }
                     var img = new Image();
                     img.crossOrigin = "anonymous";
                     img.onload = function () {
-                        try { ctx.clearRect(0, 0, canvas.width, canvas.height); drawCover(ctx, img, canvas.width, canvas.height); } catch (e) {}
+                        try { ctx.clearRect(0, 0, w, h); ctx.save(); clip(); drawCover(ctx, img, w, h); ctx.restore(); } catch (e) {}
                         done();
                     };
                     img.onerror = function () { drawDefault(); done(); };
