@@ -1,7 +1,7 @@
 diff --git a/index.html b/index.html
 --- a/index.html
 +++ b/index.html
-@@ -3,17 +3,42 @@
+@@ -3,17 +3,46 @@
  	<head>
  		<meta charset="utf-8">
  		<title>Playtime</title>
@@ -14,6 +14,10 @@ diff --git a/index.html b/index.html
  				-webkit-user-select: none;
 +				user-select: none;
 +				touch-action: none;
++				/* Stop Android Chrome from painting a tap-highlight / callout on
++				   every touch, which repaints and adds jank when tapping fast. */
++				-webkit-tap-highlight-color: transparent;
++				-webkit-touch-callout: none;
  				box-sizing: border-box;
  			}
  			body {
@@ -44,7 +48,7 @@ diff --git a/index.html b/index.html
  			}
  		</style>
  		<!-- this style tag is removed after the LoadingScreen class takes over -->
-@@ -25,13 +50,134 @@
+@@ -25,13 +54,134 @@
  				left: 0;
  			}
  			#gp-container {
@@ -182,7 +186,7 @@ diff --git a/index.html b/index.html
  			}
  			.ann-box-gp {
  				display: -webkit-box;
-@@ -116,6 +262,52 @@
+@@ -116,6 +266,52 @@
  				from {opacity: 1} to {opacity: 0}
  			}*/
  		</style>
@@ -235,7 +239,7 @@ diff --git a/index.html b/index.html
  
  		<script type="text/javascript">
  		(function(){
-@@ -182,6 +374,27 @@
+@@ -182,6 +378,27 @@
  				for (i = 0; i < els.length; i++) {
  					els[i].innerHTML = str;
  				}
@@ -263,7 +267,7 @@ diff --git a/index.html b/index.html
  			}, false);
  			
  		})();
-@@ -193,20 +406,26 @@
+@@ -193,20 +410,26 @@
  	</head>
  	<body>
  		

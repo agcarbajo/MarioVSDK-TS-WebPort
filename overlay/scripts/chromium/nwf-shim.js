@@ -384,20 +384,25 @@
                 evt.preventDefault();
             }
         }, false);
+        // pointermove is high-frequency. Registering it non-passive and calling
+        // preventDefault forces Android Chrome onto the slow input path, where it
+        // must dispatch every move to the main thread and wait before compositing
+        // the next frame -- which starves the game's render loop and makes it
+        // stutter while touching (worse the faster you tap). The container already
+        // has touch-action:none, so the browser won't scroll/zoom anyway and the
+        // preventDefault is redundant. Make this listener passive instead.
         global.addEventListener("pointermove", function (evt) {
             if (isChromiumPortUiEvent(evt)) {
                 return;
             }
             if (isInputSuppressed()) {
                 clearTouchState();
-                evt.preventDefault();
                 return;
             }
             if (activePointerId === evt.pointerId) {
                 updateTouchFromEvent(evt, true, true);
-                evt.preventDefault();
             }
-        }, false);
+        }, { passive: true });
         global.addEventListener("pointerup", function (evt) {
             if (isChromiumPortUiEvent(evt)) {
                 return;
