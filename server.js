@@ -20,7 +20,7 @@ const crypto = require("crypto");
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 const SERVER_NAME = process.env.SERVER_NAME || "MvDK Community Server";
-const VERSION = "0.2.0";
+const VERSION = "0.3.0";
 
 const DATA_DIR = path.join(__dirname, "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
@@ -412,6 +412,47 @@ function requireAdmin(req, res) {
     if (!isAdmin(req)) { bad(res, "admin auth required", 401); return false; }
     return true;
 }
+
+// --- cascade-delete helpers (do not saveDb; caller saves once) ---
+function removeCommentFiles(c) {
+    try { fs.unlinkSync(path.join(COMMENT_DIR, c.id + ".png")); } catch (e) {}
+}
+function deleteCommentCascade(id) {
+    const c = db.comments[id]; if (!c) return false;
+    removeCommentFiles(c);
+    delete db.comments[id];
+    return true;
+}
+function removeLevelFiles(l) {
+    for (const dsid of [l.primaryID, l.secondaryID]) {
+        if (dsid) { try { fs.unlinkSync(path.join(UPLOAD_DIR, "ds-" + dsid + ".bin")); } catch (e) {} }
+    }
+    for (const ext of [".appdata", ".thumb.png", ".memo.png", ".json"]) {
+        try { fs.unlinkSync(path.join(UPLOAD_DIR, l.id + ext)); } catch (e) {}
+    }
+}
+function deleteLevelCascade(id) {
+    const l = db.levels[id]; if (!l) return false;
+    removeLevelFiles(l);
+    for (const cid of Object.keys(db.comments)) {
+        if (db.comments[cid].levelId === id) deleteCommentCascade(cid);
+    }
+    delete db.levels[id];
+    return true;
+}
+function deleteUserCascade(id) {
+    if (!db.users[id]) return false;
+    // their levels (and the comments on those levels)
+    for (const lid of Object.keys(db.levels)) {
+        if (db.levels[lid].authorId === id) deleteLevelCascade(lid);
+    }
+    // their own comments anywhere
+    for (const cid of Object.keys(db.comments)) {
+        if (db.comments[cid].userId === id) deleteCommentCascade(cid);
+    }
+    delete db.users[id];
+    return true;
+}
 route("GET", "/api/admin/overview", async (req, res) => {
     if (!requireAdmin(req, res)) return;
     ok(res, {
@@ -432,11 +473,16 @@ route("POST", "/api/admin/levels/:id/hide", async (req, res, params) => {
 });
 route("DELETE", "/api/admin/levels/:id", async (req, res, params) => {
     if (!requireAdmin(req, res)) return;
-    if (!db.levels[params.id]) return bad(res, "not found", 404);
-    delete db.levels[params.id];
-    for (const cid of Object.keys(db.comments)) if (db.comments[cid].levelId === params.id) delete db.comments[cid];
-    try { fs.unlinkSync(path.join(UPLOAD_DIR, params.id + ".json")); } catch (e) {}
+    if (!deleteLevelCascade(params.id)) return bad(res, "not found", 404);
     saveDb(); ok(res, { ok: true });
+});
+// Batch delete levels (each cascades to its comments).
+route("POST", "/api/admin/levels/delete", async (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const body = await readBody(req);
+    const ids = Array.isArray(body.ids) ? body.ids : [];
+    let n = 0; for (const id of ids) if (deleteLevelCascade(id)) n++;
+    saveDb(); ok(res, { ok: true, deleted: n });
 });
 // Mark a level official (Nintendo) or not. Official levels move to the Nintendo
 // community and read as the official platform type in-game.
@@ -493,8 +539,15 @@ route("POST", "/api/admin/comments/:id/hide", async (req, res, params) => {
 });
 route("DELETE", "/api/admin/comments/:id", async (req, res, params) => {
     if (!requireAdmin(req, res)) return;
-    if (!db.comments[params.id]) return bad(res, "not found", 404);
-    delete db.comments[params.id]; saveDb(); ok(res, { ok: true });
+    if (!deleteCommentCascade(params.id)) return bad(res, "not found", 404);
+    saveDb(); ok(res, { ok: true });
+});
+route("POST", "/api/admin/comments/delete", async (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const body = await readBody(req);
+    const ids = Array.isArray(body.ids) ? body.ids : [];
+    let n = 0; for (const id of ids) if (deleteCommentCascade(id)) n++;
+    saveDb(); ok(res, { ok: true, deleted: n });
 });
 route("POST", "/api/admin/users/:id/ban", async (req, res, params) => {
     if (!requireAdmin(req, res)) return;
@@ -503,8 +556,15 @@ route("POST", "/api/admin/users/:id/ban", async (req, res, params) => {
 });
 route("DELETE", "/api/admin/users/:id", async (req, res, params) => {
     if (!requireAdmin(req, res)) return;
-    if (!db.users[params.id]) return bad(res, "not found", 404);
-    delete db.users[params.id]; saveDb(); ok(res, { ok: true });
+    if (!deleteUserCascade(params.id)) return bad(res, "not found", 404);
+    saveDb(); ok(res, { ok: true });
+});
+route("POST", "/api/admin/users/delete", async (req, res) => {
+    if (!requireAdmin(req, res)) return;
+    const body = await readBody(req);
+    const ids = Array.isArray(body.ids) ? body.ids : [];
+    let n = 0; for (const id of ids) if (deleteUserCascade(id)) n++;
+    saveDb(); ok(res, { ok: true, deleted: n });
 });
 
 // ------------------------------------------------------------ static files ---

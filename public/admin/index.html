@@ -1,74 +1,206 @@
 <!doctype html>
-<html lang="en">
+<html lang="es">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MvDK Community — Admin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&family=Roboto+Flex:opsz,wght@8..144,400;8..144,500;8..144,600;8..144,700&display=swap" rel="stylesheet">
 <style>
-  :root { --bg:#0f1320; --card:#1a2032; --line:#2b3450; --txt:#e7ecff; --mut:#9aa6c8; --acc:#ffc629; --danger:#ff5b6e; --gold:#ffd54a; }
+  /* ---- Material 3 Expressive tokens (dark, gold-tonal) ---- */
+  :root {
+    --primary:#ffd24a; --on-primary:#3e2e00; --primary-container:#5a4500; --on-primary-container:#ffe08a;
+    --secondary:#cfc6a3; --secondary-container:#4b4626; --on-secondary-container:#ece2bd;
+    --tertiary:#8fd0c0; --tertiary-container:#1f4d44; --on-tertiary-container:#aeede0;
+    --error:#ffb4ab; --error-container:#5d1620; --on-error-container:#ffdad6;
+    --surface:#14130c; --surface-dim:#14130c; --surface-bright:#3b3a30;
+    --surface-c-lowest:#0e0d07; --surface-c-low:#1c1b13; --surface-c:#201f17; --surface-c-high:#2b2a21; --surface-c-highest:#36352b;
+    --on-surface:#e8e2d4; --on-surface-var:#cdc6b3; --outline:#979080; --outline-variant:#4b4839;
+    --shadow:rgba(0,0,0,.5);
+    --r-xs:8px; --r-s:12px; --r-m:16px; --r-l:24px; --r-xl:28px; --r-full:999px;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --primary:#785a00; --on-primary:#ffffff; --primary-container:#ffe08a; --on-primary-container:#251a00;
+      --secondary:#69624a; --secondary-container:#f1e7c6; --on-secondary-container:#211b04;
+      --tertiary:#37665b; --tertiary-container:#bbece0; --on-tertiary-container:#00201a;
+      --error:#ba1a1a; --error-container:#ffdad6; --on-error-container:#410002;
+      --surface:#fdf9ee; --surface-dim:#ded9cc; --surface-bright:#fdf9ee;
+      --surface-c-lowest:#ffffff; --surface-c-low:#f7f2e6; --surface-c:#f2ece0; --surface-c-high:#ece6da; --surface-c-highest:#e6e0d4;
+      --on-surface:#1c1b14; --on-surface-var:#4b4839; --outline:#7c7768; --outline-variant:#cdc6b3;
+      --shadow:rgba(0,0,0,.2);
+    }
+  }
   * { box-sizing:border-box; }
-  body { margin:0; font:14px/1.45 system-ui,Segoe UI,Arial,sans-serif; background:var(--bg); color:var(--txt); }
-  header { display:flex; align-items:center; gap:14px; padding:14px 20px; background:#141a2b; border-bottom:1px solid var(--line); position:sticky; top:0; z-index:5; }
-  header h1 { font-size:16px; margin:0; }
-  header .stat { color:var(--mut); font-size:12px; }
-  header .right { margin-left:auto; display:flex; gap:8px; align-items:center; }
-  input, button { font:inherit; }
-  input[type=text],input[type=password]{ background:#0c1120; border:1px solid var(--line); color:var(--txt); border-radius:8px; padding:7px 10px; }
-  button { background:#27314e; color:var(--txt); border:1px solid var(--line); border-radius:8px; padding:7px 12px; cursor:pointer; }
-  button:hover { background:#324063; }
-  button.danger { background:#3a1620; border-color:#5e2230; color:#ffb3bd; }
-  button.danger:hover { background:#56202e; }
-  button.gold { background:#4a3a10; border-color:#6e551a; color:var(--gold); }
-  button.gold.on { background:var(--acc); color:#1a1300; border-color:var(--acc); font-weight:700; }
-  nav { display:flex; gap:6px; padding:14px 20px 0; }
-  nav button { border-radius:999px; }
-  nav button.active { background:var(--acc); color:#1a1300; border-color:var(--acc); font-weight:700; }
-  main { padding:16px 20px 60px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; gap:12px; align-items:center; }
-  .card img.thumb { width:64px; height:48px; border-radius:8px; object-fit:cover; background:#0c1120; flex:0 0 auto; }
-  .card img.ava { width:48px; height:48px; border-radius:10px; object-fit:cover; background:#0c1120; }
-  .card .meta { flex:1; min-width:0; } .card .meta.click { cursor:pointer; }
-  .card .meta b { font-size:14px; }
-  .card .meta small { color:var(--mut); display:block; }
-  .card .acts { display:flex; gap:6px; flex-wrap:wrap; }
-  .pill { font-size:11px; color:var(--mut); border:1px solid var(--line); border-radius:999px; padding:1px 8px; margin-left:6px; }
-  .pill.official { color:#1a1300; background:var(--gold); border-color:var(--gold); font-weight:700; }
-  .memo { width:80px; height:30px; object-fit:contain; background:#fff; border-radius:6px; cursor:pointer; }
-  .empty { color:var(--mut); padding:30px; text-align:center; }
-  .hidden-row { opacity:.5; }
-  .login { max-width:380px; margin:80px auto; }
-  .login .card { display:block; }
-  .login h2 { margin:0 0 6px; } .login p { color:var(--mut); margin:0 0 14px; }
-  .login input { width:100%; margin-bottom:10px; }
-  .banned { color:var(--danger); font-weight:700; }
-  .modal-bg { position:fixed; inset:0; background:rgba(4,8,20,.7); display:flex; align-items:center; justify-content:center; z-index:20; padding:20px; }
-  .modal { background:var(--card); border:1px solid var(--line); border-radius:16px; max-width:680px; width:100%; max-height:90vh; overflow:auto; padding:18px 20px; }
-  .modal h2 { margin:0 0 4px; } .modal .close { float:right; }
-  .modal img.preview { width:100%; max-width:360px; border-radius:10px; background:#0c1120; display:block; margin:8px 0; }
-  .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; margin:10px 0; }
-  .kv span:nth-child(odd){ color:var(--mut); }
-  .cmt { border-top:1px solid var(--line); padding:8px 0; display:flex; gap:10px; align-items:center; }
-  .cmt img { width:96px; height:36px; object-fit:contain; background:#fff; border-radius:6px; }
-  .muted { color:var(--mut); }
-  .cmt-toolbar { display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; }
-  .viewtoggle { display:inline-flex; border:1px solid var(--line); border-radius:8px; overflow:hidden; }
-  .viewtoggle button { border:0; border-radius:0; background:#27314e; padding:6px 12px; }
-  .viewtoggle button.active { background:var(--acc); color:#1a1300; font-weight:700; }
-  .cmt-listv { display:flex; flex-direction:column; gap:10px; }
-  .cmt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:12px; }
-  .cmt-card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px; display:flex; gap:12px; }
-  .cmt-grid .cmt-card { flex-direction:column; }
-  .cmt-card .cmt-art { width:120px; height:48px; object-fit:contain; background:#fff; border-radius:8px; flex:0 0 auto; cursor:pointer; }
-  .cmt-grid .cmt-card .cmt-art { width:100%; height:120px; }
-  .cmt-card .cmt-art.stamp { display:flex; align-items:center; justify-content:center; font-size:28px; cursor:default; }
-  .cmt-card .cmt-body { flex:1; min-width:0; }
-  .cmt-head { display:flex; align-items:center; gap:8px; }
-  .cmt-ava { width:28px; height:28px; border-radius:50%; object-fit:cover; background:#0c1120; flex:0 0 auto; }
-  .cmt-ava.ph { background:#2a3350; }
-  .cmt-text { margin:6px 0; word-break:break-word; }
-  .cmt-meta { color:var(--mut); font-size:12px; }
-  .cmt-acts { display:flex; gap:6px; flex-wrap:wrap; align-items:flex-start; }
-  .cmt-grid .cmt-acts { justify-content:flex-end; }
+  html,body { height:100%; }
+  body { margin:0; font-family:"Roboto Flex",system-ui,Segoe UI,Arial,sans-serif; background:var(--surface); color:var(--on-surface); -webkit-font-smoothing:antialiased; }
+  .ico { font-family:"Material Symbols Rounded"; font-weight:normal; font-style:normal; line-height:1; vertical-align:middle; -webkit-font-feature-settings:'liga'; }
+  .ico.fill { font-variation-settings:'FILL' 1; }
+
+  /* ---- buttons ---- */
+  button { font:inherit; cursor:pointer; border:none; background:none; color:inherit; }
+  .btn { display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 20px; border-radius:var(--r-full);
+         font-weight:600; font-size:14px; transition:.15s; white-space:nowrap; }
+  .btn .ico { font-size:18px; }
+  .btn.filled { background:var(--primary); color:var(--on-primary); }
+  .btn.filled:hover { box-shadow:0 1px 3px var(--shadow); filter:brightness(1.05); }
+  .btn.tonal { background:var(--secondary-container); color:var(--on-secondary-container); }
+  .btn.tonal:hover { filter:brightness(1.1); }
+  .btn.tonal.on { background:var(--primary); color:var(--on-primary); }
+  .btn.outlined { border:1px solid var(--outline); color:var(--primary); }
+  .btn.outlined:hover { background:color-mix(in srgb,var(--primary) 8%,transparent); }
+  .btn.text { padding:0 12px; color:var(--primary); }
+  .btn.text:hover { background:color-mix(in srgb,var(--primary) 8%,transparent); }
+  .btn.danger { background:var(--error-container); color:var(--on-error-container); }
+  .btn.danger:hover { filter:brightness(1.12); }
+  .btn.small { height:32px; padding:0 14px; font-size:13px; }
+  .icon-btn { width:40px; height:40px; border-radius:var(--r-full); display:inline-flex; align-items:center; justify-content:center; color:var(--on-surface-var); }
+  .icon-btn:hover { background:color-mix(in srgb,var(--on-surface) 8%,transparent); }
+  .icon-btn .ico { font-size:22px; }
+
+  /* ---- app shell ---- */
+  .topbar { position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:16px;
+            padding:14px 24px; background:var(--surface-c); }
+  .topbar .logo { width:40px; height:40px; border-radius:var(--r-s); background:var(--primary-container); color:var(--on-primary-container);
+                  display:flex; align-items:center; justify-content:center; }
+  .topbar .logo .ico { font-size:24px; }
+  .topbar h1 { font-size:20px; font-weight:600; margin:0; letter-spacing:.1px; }
+  .topbar .sub { font-size:12px; color:var(--on-surface-var); margin-top:2px; }
+  .topbar .spacer { flex:1; }
+  .stats { display:flex; gap:8px; }
+  .chip-stat { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 14px; border-radius:var(--r-xs);
+               background:var(--surface-c-high); color:var(--on-surface-var); font-size:13px; font-weight:500; }
+  .chip-stat b { color:var(--on-surface); }
+
+  nav.tabs { display:flex; gap:8px; padding:10px 24px; background:var(--surface-c); flex-wrap:wrap; position:sticky; top:69px; z-index:9; }
+  nav.tabs .tab { display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 18px; border-radius:var(--r-full);
+                  font-weight:600; font-size:14px; color:var(--on-surface-var); background:transparent; transition:.15s; }
+  nav.tabs .tab:hover { background:color-mix(in srgb,var(--on-surface) 6%,transparent); }
+  nav.tabs .tab.active { background:var(--secondary-container); color:var(--on-secondary-container); }
+  nav.tabs .tab.active .ico { font-variation-settings:'FILL' 1; }
+  nav.tabs .tab .ico { font-size:20px; }
+
+  main { padding:20px 24px 80px; max-width:1100px; margin:0 auto; }
+  .section-head { display:flex; align-items:center; gap:12px; margin:4px 2px 16px; }
+  .section-head h2 { margin:0; font-size:22px; font-weight:600; }
+  .section-head .spacer { flex:1; }
+
+  /* ---- segmented (view toggle / language) ---- */
+  .segmented { display:inline-flex; border:1px solid var(--outline); border-radius:var(--r-full); overflow:hidden; height:40px; }
+  .segmented button { display:inline-flex; align-items:center; gap:6px; padding:0 16px; font-weight:600; font-size:13px; color:var(--on-surface-var); }
+  .segmented button + button { border-left:1px solid var(--outline); }
+  .segmented button.active { background:var(--secondary-container); color:var(--on-secondary-container); }
+  .segmented button.active .ico { font-variation-settings:'FILL' 1; }
+  .segmented .ico { font-size:18px; }
+
+  /* ---- selection bar ---- */
+  .selbar { display:flex; align-items:center; gap:12px; background:var(--primary-container); color:var(--on-primary-container);
+            border-radius:var(--r-full); padding:8px 10px 8px 18px; margin-bottom:16px; }
+  .selbar b { font-size:15px; }
+  .selbar .spacer { flex:1; }
+
+  /* ---- cards ---- */
+  .card { background:var(--surface-c-low); border-radius:var(--r-l); padding:14px; margin-bottom:12px;
+          display:flex; gap:14px; align-items:center; transition:.15s; }
+  .card.sel { background:var(--secondary-container); outline:2px solid var(--primary); }
+  .card.dim { opacity:.55; }
+  .check { width:24px; height:24px; flex:0 0 auto; border-radius:6px; border:2px solid var(--outline);
+           display:flex; align-items:center; justify-content:center; color:transparent; transition:.12s; cursor:pointer; }
+  .check.on { background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
+  .check .ico { font-size:18px; }
+  .thumb { width:88px; height:64px; border-radius:var(--r-m); object-fit:cover; background:var(--surface-c-high); flex:0 0 auto; }
+  .ava { width:52px; height:52px; border-radius:var(--r-m); object-fit:cover; background:var(--surface-c-high); flex:0 0 auto; }
+  .ava.round { border-radius:var(--r-full); }
+  .grow { flex:1; min-width:0; }
+  .grow.click { cursor:pointer; }
+  .title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .title-row b { font-size:16px; font-weight:600; }
+  .sub-line { color:var(--on-surface-var); font-size:13px; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .sub-line .ico { font-size:15px; margin-right:2px; }
+  .meta-stat { display:inline-flex; align-items:center; }
+  .badge { font-size:11px; font-weight:700; border-radius:var(--r-full); padding:2px 10px; letter-spacing:.3px; }
+  .badge.official { background:var(--primary); color:var(--on-primary); }
+  .badge.hidden { background:var(--surface-c-highest); color:var(--on-surface-var); }
+  .badge.banned { background:var(--error-container); color:var(--on-error-container); }
+  .acts { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; flex:0 0 auto; }
+
+  /* ---- comments (homogeneous) ---- */
+  .cmt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
+  .cmt-list { display:flex; flex-direction:column; gap:12px; }
+  .cmt-card { background:var(--surface-c-low); border-radius:var(--r-l); padding:14px; display:flex; flex-direction:column; gap:10px; transition:.15s; }
+  .cmt-card.sel { background:var(--secondary-container); outline:2px solid var(--primary); }
+  .cmt-card.dim { opacity:.55; }
+  .cmt-top { display:flex; align-items:center; gap:10px; }
+  .cmt-ava { width:36px; height:36px; border-radius:var(--r-full); object-fit:cover; background:var(--surface-c-high); flex:0 0 auto; }
+  .cmt-who { flex:1; min-width:0; }
+  .cmt-who b { font-size:14px; font-weight:600; display:block; }
+  .cmt-who small { color:var(--on-surface-var); font-size:12px; }
+  .cmt-content { display:flex; gap:12px; align-items:flex-start; }
+  .cmt-content .drawing { width:140px; height:56px; object-fit:contain; background:#fff; border-radius:var(--r-s); flex:0 0 auto; cursor:pointer; }
+  .cmt-grid .cmt-content { flex-direction:column; }
+  .cmt-grid .cmt-content .drawing { width:100%; height:130px; }
+  .cmt-content .stamp { width:56px; height:56px; border-radius:var(--r-s); background:var(--surface-c-high); display:flex; align-items:center; justify-content:center; font-size:30px; flex:0 0 auto; }
+  .cmt-content .text { font-size:14px; line-height:1.5; word-break:break-word; align-self:center; }
+  .cmt-foot { display:flex; align-items:center; gap:8px; }
+  .cmt-foot .where { flex:1; min-width:0; color:var(--on-surface-var); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cmt-foot .where b { color:var(--on-surface); }
+
+  .empty { color:var(--on-surface-var); padding:60px 20px; text-align:center; }
+  .empty .ico { font-size:56px; display:block; margin-bottom:12px; color:var(--outline); }
+
+  /* ---- login ---- */
+  .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
+  .login { background:var(--surface-c-low); border-radius:var(--r-xl); padding:32px; max-width:420px; width:100%; }
+  .login .logo { width:64px; height:64px; border-radius:var(--r-l); background:var(--primary-container); color:var(--on-primary-container);
+                 display:flex; align-items:center; justify-content:center; margin:0 auto 18px; }
+  .login .logo .ico { font-size:36px; }
+  .login h2 { margin:0 0 6px; text-align:center; font-size:24px; font-weight:600; }
+  .login p { color:var(--on-surface-var); margin:0 0 22px; text-align:center; font-size:14px; }
+  .field { position:relative; margin-bottom:16px; }
+  .field input { width:100%; height:56px; padding:0 16px; border-radius:var(--r-xs); border:1px solid var(--outline);
+                 background:transparent; color:var(--on-surface); font:inherit; }
+  .field input:focus { outline:none; border:2px solid var(--primary); padding:0 15px; }
+  .login .btn.filled { width:100%; justify-content:center; height:48px; }
+  .err { color:var(--error); font-size:13px; margin:-6px 0 14px; text-align:center; }
+
+  /* ---- modal ---- */
+  .scrim { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
+  .dialog { background:var(--surface-c-high); border-radius:var(--r-xl); max-width:720px; width:100%; max-height:92vh; overflow:auto; }
+  .dialog-head { display:flex; align-items:center; gap:12px; padding:20px 24px 8px; }
+  .dialog-head h2 { margin:0; font-size:22px; font-weight:600; flex:1; }
+  .dialog-body { padding:8px 24px 24px; }
+  .preview { width:100%; max-width:380px; border-radius:var(--r-m); background:var(--surface-c); display:block; margin:6px 0 16px; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:10px 18px; margin:8px 0 18px; font-size:14px; }
+  .kv .k { color:var(--on-surface-var); }
+  .kv .v { font-weight:500; }
+  .dialog h3 { font-size:16px; font-weight:600; margin:18px 0 12px; }
+
+  /* thread (chat-style, ascending) */
+  .thread { display:flex; flex-direction:column; gap:14px; }
+  .bubble { display:flex; gap:10px; }
+  .bubble .cmt-ava { width:34px; height:34px; }
+  .bubble .body { flex:1; min-width:0; background:var(--surface-c-low); border-radius:4px 16px 16px 16px; padding:10px 14px; }
+  .bubble .body .who { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
+  .bubble .body .who b { font-size:13px; font-weight:600; }
+  .bubble .body .who small { color:var(--on-surface-var); font-size:11px; }
+  .bubble .body .txt { font-size:14px; line-height:1.45; word-break:break-word; }
+  .bubble .body img.drawing { width:160px; max-width:100%; object-fit:contain; background:#fff; border-radius:var(--r-s); margin-top:4px; }
+  .bubble .body .stamp { font-size:30px; }
+  .bubble .body .delc { float:right; }
+
+  /* settings */
+  .settings-card { background:var(--surface-c-low); border-radius:var(--r-l); padding:20px 22px; margin-bottom:14px; }
+  .settings-card h3 { margin:0 0 4px; font-size:16px; font-weight:600; }
+  .settings-card p { margin:0 0 16px; color:var(--on-surface-var); font-size:13px; }
+  .settings-row { display:flex; align-items:center; gap:16px; }
+  .settings-row .grow { flex:1; }
+
+  @media (max-width:640px){
+    .topbar .stats { display:none; }
+    .acts { width:100%; justify-content:flex-start; }
+    .card { flex-wrap:wrap; }
+  }
 </style>
 </head>
 <body>
@@ -79,139 +211,349 @@ const $ = (s,r=document)=>r.querySelector(s);
 const api = (p,opts={}) => fetch(p, Object.assign({headers:{'X-Admin-Token':token(),'Content-Type':'application/json'}}, opts));
 const token = () => localStorage.getItem('mvdk_admin_token') || '';
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const dt = t => new Date(t).toLocaleString();
+const ic = n => `<span class="ico">${n}</span>`;
+
+/* ---------------- i18n ---------------- */
+const I18N = {
+  es: {
+    appSub:"Panel de administración", users:"usuarios", levels:"niveles", comments:"comentarios",
+    navLevels:"Niveles", navComments:"Comentarios", navUsers:"Usuarios", navSettings:"Ajustes",
+    refresh:"Actualizar", login:"Acceso de administrador",
+    loginHint:"Introduce el token de administrador (en la consola del servidor / data/admin-token.txt).",
+    tokenPh:"token de administrador", enter:"Entrar", invalidToken:"Token no válido",
+    selected:"seleccionados", deleteSel:"Borrar selección", clearSel:"Limpiar",
+    selectAll:"Seleccionar todo",
+    noLevels:"Aún no hay niveles.", noComments:"Aún no hay comentarios.", noUsers:"Aún no hay usuarios.",
+    by:"por", likes:"me gusta", stars:"estrellas", downloads:"descargas",
+    official:"OFICIAL", hidden:"oculto", banned:"BLOQUEADO",
+    makeOfficial:"Marcar oficial", unofficial:"Quitar oficial", download:"Descargar",
+    hide:"Ocultar", unhide:"Mostrar", del:"Borrar", ban:"Bloquear", unban:"Desbloquear",
+    viewList:"Lista", viewGrid:"Cuadrícula",
+    confirmLevel:"¿Borrar este nivel y todos sus comentarios?",
+    confirmLevels:n=>`¿Borrar ${n} niveles (y todos sus comentarios)?`,
+    confirmComment:"¿Borrar este comentario?",
+    confirmComments:n=>`¿Borrar ${n} comentarios?`,
+    confirmUser:"¿Borrar este usuario, sus niveles y todos sus comentarios?",
+    confirmUsers:n=>`¿Borrar ${n} usuarios (con sus niveles y comentarios)?`,
+    drawing:"dibujo", stamp:"sello", noText:"(sin texto)",
+    community:"Comunidad", nintendo:"Nintendo (oficial)", usersCommunity:"Usuarios",
+    doors:"Puertas", multiDoor:"Varias puertas", oneDoor:n=>`${n} puerta${n===1?'':'s'}`,
+    goalScore:"Puntos meta", dimensions:"Dimensiones", theme:"Tema",
+    dataIds:"IDs de datos", published:"Publicado", joined:"se unió", id:"id",
+    commentsThread:"Hilo de comentarios", noCommentsLevel:"Sin comentarios.",
+    settings:"Ajustes", language:"Idioma", langDesc:"Elige el idioma del panel.",
+    session:"Sesión", sessionDesc:"Cierra la sesión de administrador en este navegador.",
+    logout:"Cerrar sesión", about:"Acerca de", serverVersion:"Versión del servidor",
+    spanish:"Español", english:"English",
+  },
+  en: {
+    appSub:"Administration panel", users:"users", levels:"levels", comments:"comments",
+    navLevels:"Levels", navComments:"Comments", navUsers:"Users", navSettings:"Settings",
+    refresh:"Refresh", login:"Admin login",
+    loginHint:"Enter the server's admin token (printed in the console / data/admin-token.txt).",
+    tokenPh:"admin token", enter:"Enter", invalidToken:"Invalid token",
+    selected:"selected", deleteSel:"Delete selected", clearSel:"Clear",
+    selectAll:"Select all",
+    noLevels:"No levels uploaded yet.", noComments:"No comments yet.", noUsers:"No users yet.",
+    by:"by", likes:"likes", stars:"stars", downloads:"downloads",
+    official:"OFFICIAL", hidden:"hidden", banned:"BANNED",
+    makeOfficial:"Make official", unofficial:"Remove official", download:"Download",
+    hide:"Hide", unhide:"Unhide", del:"Delete", ban:"Ban", unban:"Unban",
+    viewList:"List", viewGrid:"Grid",
+    confirmLevel:"Delete this level and all its comments?",
+    confirmLevels:n=>`Delete ${n} levels (and all their comments)?`,
+    confirmComment:"Delete this comment?",
+    confirmComments:n=>`Delete ${n} comments?`,
+    confirmUser:"Delete this user, their levels and all their comments?",
+    confirmUsers:n=>`Delete ${n} users (with their levels and comments)?`,
+    drawing:"drawing", stamp:"stamp", noText:"(no text)",
+    community:"Community", nintendo:"Nintendo (official)", usersCommunity:"Users",
+    doors:"Doors", multiDoor:"Multiple doors", oneDoor:n=>`${n} door${n===1?'':'s'}`,
+    goalScore:"Goal score", dimensions:"Dimensions", theme:"Theme",
+    dataIds:"Data IDs", published:"Published", joined:"joined", id:"id",
+    commentsThread:"Comment thread", noCommentsLevel:"No comments.",
+    settings:"Settings", language:"Language", langDesc:"Choose the panel language.",
+    session:"Session", sessionDesc:"Sign out of the admin panel on this browser.",
+    logout:"Log out", about:"About", serverVersion:"Server version",
+    spanish:"Español", english:"English",
+  }
+};
+let lang = localStorage.getItem('mvdk_admin_lang') || 'es';
+const t = (k,arg)=>{ const v=(I18N[lang]||I18N.es)[k]; return typeof v==='function'?v(arg):(v!=null?v:k); };
+const dt = ts => new Date(ts).toLocaleString(lang==='es'?'es-ES':'en-US');
+
+/* ---------------- state ---------------- */
 let data = {users:[],levels:[],comments:[]};
 let tab = 'levels';
 let commentView = localStorage.getItem('mvdk_admin_cmtview') || 'list';
+let serverVersion = '';
+const sel = { levels:new Set(), comments:new Set(), users:new Set() };
+function clearSel(){ sel.levels.clear(); sel.comments.clear(); sel.users.clear(); }
 
+/* ---------------- load ---------------- */
 async function load(){
   const r = await api('/api/admin/overview');
-  if(r.status===401){ renderLogin('Invalid token'); return; }
+  if(r.status===401){ renderLogin(t('invalidToken')); return; }
   data = await r.json();
+  try { const v = await (await api('/api/info')).json(); serverVersion = v.version||''; } catch(e){}
   render();
 }
+
+/* ---------------- login ---------------- */
 function renderLogin(err){
-  $('#app').innerHTML = `<div class="login"><div class="card">
-    <h2>Admin login</h2><p>Enter the server's admin token (printed in the server console / data/admin-token.txt).</p>
-    ${err?`<p class="banned">${esc(err)}</p>`:''}
-    <input type="password" id="tok" placeholder="admin token" value="${esc(token())}">
-    <button id="go">Enter</button></div></div>`;
+  $('#modal').innerHTML=''; clearSel();
+  $('#app').innerHTML = `<div class="login-wrap"><div class="login">
+    <div class="logo">${ic('shield_person')}</div>
+    <h2>${t('login')}</h2><p>${t('loginHint')}</p>
+    ${err?`<div class="err">${esc(err)}</div>`:''}
+    <div class="field"><input type="password" id="tok" placeholder="${t('tokenPh')}" value="${esc(token())}"></div>
+    <button class="btn filled" id="go">${t('enter')}</button>
+  </div></div>`;
   $('#go').onclick = ()=>{ localStorage.setItem('mvdk_admin_token',$('#tok').value.trim()); load(); };
   $('#tok').onkeydown = e=>{ if(e.key==='Enter') $('#go').click(); };
+  $('#tok').focus();
 }
+
+/* ---------------- shell ---------------- */
 function render(){
   $('#app').innerHTML = `
-  <header><h1>MvDK Community — Admin</h1>
-    <span class="stat">${data.users.length} users · ${data.levels.length} levels · ${data.comments.length} comments</span>
-    <span class="right"><button id="refresh">↻ Refresh</button><button id="logout">Logout</button></span></header>
-  <nav>
-    <button data-tab="levels">Levels</button>
-    <button data-tab="comments">Comments</button>
-    <button data-tab="users">Users</button>
-  </nav><main id="list"></main>`;
-  $('#refresh').onclick=load; $('#logout').onclick=()=>{localStorage.removeItem('mvdk_admin_token');renderLogin();};
-  document.querySelectorAll('nav button').forEach(b=>{ b.classList.toggle('active',b.dataset.tab===tab); b.onclick=()=>{tab=b.dataset.tab;render();}; });
+  <div class="topbar">
+    <div class="logo">${ic('stadia_controller')}</div>
+    <div><h1>MvDK Community</h1><div class="sub">${t('appSub')}</div></div>
+    <div class="spacer"></div>
+    <div class="stats">
+      <span class="chip-stat">${ic('person')}<b>${data.users.length}</b> ${t('users')}</span>
+      <span class="chip-stat">${ic('grid_view')}<b>${data.levels.length}</b> ${t('levels')}</span>
+      <span class="chip-stat">${ic('chat_bubble')}<b>${data.comments.length}</b> ${t('comments')}</span>
+    </div>
+    <button class="icon-btn" id="refresh" title="${t('refresh')}">${ic('refresh')}</button>
+  </div>
+  <nav class="tabs">
+    <button class="tab" data-tab="levels">${ic('grid_view')}${t('navLevels')}</button>
+    <button class="tab" data-tab="comments">${ic('chat_bubble')}${t('navComments')}</button>
+    <button class="tab" data-tab="users">${ic('group')}${t('navUsers')}</button>
+    <button class="tab" data-tab="settings">${ic('settings')}${t('navSettings')}</button>
+  </nav>
+  <main id="list"></main>`;
+  $('#refresh').onclick=load;
+  document.querySelectorAll('nav .tab').forEach(b=>{
+    b.classList.toggle('active',b.dataset.tab===tab);
+    b.onclick=()=>{ tab=b.dataset.tab; clearSel(); render(); };
+  });
   renderList();
 }
-function renderList(){
-  const el = $('#list'); let h='';
-  if(tab==='levels'){
-    if(!data.levels.length) h='<div class="empty">No levels uploaded yet.</div>';
-    data.levels.forEach(l=>{ h+=`<div class="card ${l.hidden?'hidden-row':''}">
-      <img class="thumb" src="${l.thumbnail||''}" onerror="this.style.visibility='hidden'">
-      <div class="meta click" onclick="openLevel('${l.id}')"><b>${esc(l.title)}</b>${l.official?'<span class="pill official">OFICIAL</span>':''}${l.hidden?'<span class="pill">hidden</span>':''}
-        <small>by ${esc(l.authorName)} · 👍 ${l.stars} likes · ⭐ ${l.tips||0} estrellas · ⬇ ${l.downloads} · 💬 ${l.comments} · ${dt(l.createdAt)}</small>
-        ${l.params?`<small>${l.params.multiDoor?'multi-door':(l.params.doors||1)+' door'} · meta ${l.params.width}×${l.params.height} · ${esc(l.params.theme||'')}</small>`:''}</div>
-      <div class="acts">
-        <button class="gold ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${l.official?'★ Official':'Make official'}</button>
-        <button onclick="dlLevel('${l.id}')">⬇ Download</button>
-        <button onclick="hideLevel('${l.id}',${!l.hidden})">${l.hidden?'Unhide':'Hide'}</button>
-        <button class="danger" onclick="delLevel('${l.id}')">Delete</button></div></div>`; });
-  } else if(tab==='comments'){
-    h += `<div class="cmt-toolbar">
-      <span class="muted">${data.comments.length} comment${data.comments.length===1?'':'s'}</span>
-      <span class="viewtoggle">
-        <button class="${commentView==='list'?'active':''}" onclick="setCmtView('list')">☰ List</button>
-        <button class="${commentView==='grid'?'active':''}" onclick="setCmtView('grid')">▦ Grid</button>
-      </span></div>`;
-    if(!data.comments.length){ h+='<div class="empty">No comments yet.</div>'; }
-    else {
-      const card = c => {
-        const ava = c.userAvatar ? `<img class="cmt-ava" src="${c.userAvatar}" onerror="this.style.visibility='hidden'">` : `<div class="cmt-ava ph"></div>`;
-        const visual = c.memo ? `<img class="cmt-art" src="${c.memo}" onclick="viewMemo('${c.memo}')" title="Ver dibujo">`
-                       : (c.stamp ? `<div class="cmt-art stamp">🔖</div>` : '');
-        const txt = c.text ? esc(c.text) : (c.memo ? '<i class="muted">dibujo</i>' : (c.stamp ? '<i class="muted">sello</i>' : '<i class="muted">—</i>'));
-        return `<div class="cmt-card ${c.hidden?'hidden-row':''}">
-          ${visual||''}
-          <div class="cmt-body">
-            <div class="cmt-head">${ava}<b>${esc(c.userName)}</b>${c.hidden?'<span class="pill">hidden</span>':''}</div>
-            <div class="cmt-text">${txt}</div>
-            <div class="cmt-meta">en <b>${esc(c.levelTitle||c.levelId)}</b> · ${dt(c.createdAt)}</div>
-          </div>
-          <div class="cmt-acts">
-            <button onclick="hideComment('${c.id}',${!c.hidden})">${c.hidden?'Unhide':'Hide'}</button>
-            <button class="danger" onclick="delComment('${c.id}')">Delete</button>
-          </div></div>`;
-      };
-      h += `<div class="${commentView==='grid'?'cmt-grid':'cmt-listv'}">` + data.comments.map(card).join('') + `</div>`;
-    }
-  } else {
-    if(!data.users.length) h='<div class="empty">No users yet.</div>';
-    data.users.forEach(usr=>{ h+=`<div class="card">
-      <img class="ava" src="${usr.avatar||''}" onerror="this.style.visibility='hidden'">
-      <div class="meta"><b>${esc(usr.name)}</b> ${usr.banned?'<span class="banned">BANNED</span>':''}
-        <small>id ${esc(usr.id)} · joined ${dt(usr.createdAt)}</small></div>
-      <div class="acts"><button onclick="banUser('${usr.id}',${!usr.banned})">${usr.banned?'Unban':'Ban'}</button>
-        <button class="danger" onclick="delUser('${usr.id}')">Delete</button></div></div>`; });
-  }
-  el.innerHTML = h;
+
+/* ---------------- selection bar ---------------- */
+function selBar(kind, total){
+  const set = sel[kind]; if(!set.size) return '';
+  return `<div class="selbar">
+    <b>${set.size}</b> ${t('selected')}
+    <div class="spacer"></div>
+    <button class="btn text" onclick="clearSelection('${kind}')">${t('clearSel')}</button>
+    <button class="btn danger" onclick="deleteSelected('${kind}')">${ic('delete')}${t('deleteSel')}</button>
+  </div>`;
 }
-window.setCmtView = (v)=>{ commentView=v; localStorage.setItem('mvdk_admin_cmtview',v); renderList(); };
-function closeModal(){ $('#modal').innerHTML=''; }
-window.viewMemo = (src)=>{ $('#modal').innerHTML=`<div class="modal-bg" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()"><button class="close" onclick="closeModal()">✕</button><h2>Comentario (dibujo / sello)</h2><img class="preview" style="image-rendering:pixelated" src="${src}"></div></div>`; };
-window.openLevel = async (id)=>{
-  const r = await api('/api/admin/levels/'+id); if(!r.ok){ alert('Error'); return; }
-  const l = await r.json(); const p = l.params||{};
-  const cmts = (l.comments||[]).map(c=>`<div class="cmt">${c.memo?`<img src="${c.memo}" onclick="viewMemo('${c.memo}')">`:(c.stamp?'<span class="pill">🔖</span>':'')}
-    <div><b>${esc(c.userName)}</b> ${c.hidden?'<span class="pill">hidden</span>':''}<br><small>${c.text?esc(c.text):'<i>(dibujo/sello)</i>'} · ${dt(c.createdAt)}</small></div></div>`).join('') || '<small>Sin comentarios.</small>';
-  $('#modal').innerHTML = `<div class="modal-bg" onclick="closeModal()"><div class="modal" onclick="event.stopPropagation()">
-    <button class="close" onclick="closeModal()">✕</button>
-    <h2>${esc(l.title)} ${l.official?'<span class="pill official">OFICIAL</span>':''}</h2>
-    <small>by ${esc(l.authorName)}</small>
-    ${l.thumbnail?`<img class="preview" src="${l.thumbnail}">`:''}
-    <div class="kv">
-      <span>Comunidad</span><span>${l.official?'Nintendo (oficial)':'Usuarios'} (type ${l.communityType})</span>
-      <span>Puertas</span><span>${p.multiDoor?'Varias puertas (multi-door)':((p.doors||1)+' puerta')}</span>
-      <span>Puntos meta (estrella)</span><span>${p.goalScore!=null?p.goalScore:'—'}</span>
-      <span>Dimensiones</span><span>${p.width?`${p.width} × ${p.height}`:'—'}</span>
-      <span>Tema</span><span>${esc(p.theme||'—')}</span>
-      <span>👍 Likes (mola)</span><span>${l.stars}</span>
-      <span>⭐ Estrellas regaladas</span><span>${l.tips||0}</span>
-      <span>Descargas</span><span>${l.downloads||0}</span>
-      <span>Data IDs</span><span>${esc(l.primaryID||'—')}${l.secondaryID?(' / '+esc(l.secondaryID)):''}</span>
-      <span>Publicado</span><span>${dt(l.createdAt)}</span>
-    </div>
-    <div style="display:flex;gap:8px;margin-bottom:10px">
-      <button class="gold ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${l.official?'Quitar oficial':'Marcar oficial'}</button>
-      <button onclick="dlLevel('${l.id}')">⬇ Descargar nivel</button>
-    </div>
-    <h3>Comentarios (${(l.comments||[]).length})</h3>${cmts}
-  </div></div>`;
+window.clearSelection = (kind)=>{ sel[kind].clear(); renderList(); };
+window.toggleSel = (kind,id)=>{ const s=sel[kind]; s.has(id)?s.delete(id):s.add(id); renderList(); };
+window.toggleAll = (kind)=>{
+  const ids = (kind==='levels'?data.levels: kind==='comments'?data.comments: data.users).map(x=>x.id);
+  const s=sel[kind]; if(ids.every(i=>s.has(i))) ids.forEach(i=>s.delete(i)); else ids.forEach(i=>s.add(i));
+  renderList();
 };
+window.deleteSelected = async (kind)=>{
+  const ids=[...sel[kind]]; if(!ids.length) return;
+  const msg = kind==='levels'?t('confirmLevels',ids.length): kind==='comments'?t('confirmComments',ids.length): t('confirmUsers',ids.length);
+  if(!confirm(msg)) return;
+  await api(`/api/admin/${kind}/delete`,{method:'POST',body:JSON.stringify({ids})});
+  sel[kind].clear(); await load();
+};
+function check(kind,id){ const on=sel[kind].has(id);
+  return `<div class="check ${on?'on':''}" onclick="event.stopPropagation();toggleSel('${kind}','${id}')">${on?ic('check'):''}</div>`; }
+
+/* ---------------- list ---------------- */
+function renderList(){
+  const el=$('#list'); let h='';
+  if(tab==='settings'){ el.innerHTML=renderSettings(); bindSettings(); return; }
+
+  const arr = tab==='levels'?data.levels: tab==='comments'?data.comments: data.users;
+  const noneKey = tab==='levels'?'noLevels': tab==='comments'?'noComments':'noUsers';
+  const title = tab==='levels'?t('navLevels'): tab==='comments'?t('navComments'):t('navUsers');
+
+  h += `<div class="section-head"><h2>${title}</h2><div class="spacer"></div>`;
+  if(tab==='comments'){
+    h += `<div class="segmented">
+      <button class="${commentView==='list'?'active':''}" onclick="setCmtView('list')">${ic('view_agenda')}${t('viewList')}</button>
+      <button class="${commentView==='grid'?'active':''}" onclick="setCmtView('grid')">${ic('grid_view')}${t('viewGrid')}</button></div>`;
+  }
+  if(arr.length) h += `<button class="btn text" onclick="toggleAll('${tab}')">${ic('select_all')}${t('selectAll')}</button>`;
+  h += `</div>`;
+  h += selBar(tab, arr.length);
+
+  if(!arr.length){ el.innerHTML = h+`<div class="empty">${ic(tab==='levels'?'grid_view':tab==='comments'?'forum':'group')}${t(noneKey)}</div>`; return; }
+
+  if(tab==='levels') h += data.levels.map(levelCard).join('');
+  else if(tab==='comments') h += `<div class="${commentView==='grid'?'cmt-grid':'cmt-list'}">`+data.comments.map(commentCard).join('')+`</div>`;
+  else h += data.users.map(userCard).join('');
+  el.innerHTML=h;
+}
+
+function levelCard(l){
+  const s=sel.levels.has(l.id);
+  return `<div class="card ${s?'sel':''} ${l.hidden?'dim':''}">
+    ${check('levels',l.id)}
+    <img class="thumb" src="${l.thumbnail||''}" onerror="this.style.visibility='hidden'">
+    <div class="grow click" onclick="openLevel('${l.id}')">
+      <div class="title-row"><b>${esc(l.title)}</b>
+        ${l.official?`<span class="badge official">${t('official')}</span>`:''}
+        ${l.hidden?`<span class="badge hidden">${t('hidden')}</span>`:''}</div>
+      <div class="sub-line">
+        <span>${t('by')} ${esc(l.authorName)}</span>
+        <span class="meta-stat">👍 ${l.stars} ${t('likes')}</span>
+        <span class="meta-stat">⭐ ${l.tips||0} ${t('stars')}</span>
+        <span class="meta-stat">${ic('download')}${l.downloads||0}</span>
+        <span class="meta-stat">${ic('chat_bubble')}${l.comments||0}</span>
+      </div>
+      ${l.params?`<div class="sub-line"><span>${l.params.multiDoor?t('multiDoor'):t('oneDoor',l.params.doors||1)}</span><span>${l.params.width}×${l.params.height}</span><span>${esc(l.params.theme||'')}</span></div>`:''}
+    </div>
+    <div class="acts">
+      <button class="btn small tonal ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${ic('verified')}${l.official?t('unofficial'):t('makeOfficial')}</button>
+      <button class="btn small outlined" onclick="dlLevel('${l.id}')">${ic('download')}</button>
+      <button class="btn small tonal" onclick="hideLevel('${l.id}',${!l.hidden})">${ic(l.hidden?'visibility':'visibility_off')}</button>
+      <button class="btn small danger" onclick="delLevel('${l.id}')">${ic('delete')}</button>
+    </div></div>`;
+}
+
+function commentCard(c){
+  const s=sel.comments.has(c.id);
+  const ava = c.userAvatar?`<img class="cmt-ava" src="${c.userAvatar}" onerror="this.style.visibility='hidden'">`:`<div class="cmt-ava"></div>`;
+  let content;
+  if(c.memo) content = `<img class="drawing" src="${c.memo}" style="image-rendering:pixelated" onclick="viewMemo('${c.memo}')">`;
+  else if(c.stamp) content = `<div class="stamp">🔖</div>`;
+  else content = `<div class="text">${c.text?esc(c.text):`<i style="color:var(--on-surface-var)">${t('noText')}</i>`}</div>`;
+  // if both drawing/stamp AND text exist, show text alongside
+  const extraText = (c.memo||c.stamp) && c.text ? `<div class="text">${esc(c.text)}</div>` : '';
+  return `<div class="cmt-card ${s?'sel':''} ${c.hidden?'dim':''}">
+    <div class="cmt-top">
+      ${check('comments',c.id)}
+      ${ava}
+      <div class="cmt-who"><b>${esc(c.userName)}</b><small>${dt(c.createdAt)}</small></div>
+      ${c.hidden?`<span class="badge hidden">${t('hidden')}</span>`:''}
+    </div>
+    <div class="cmt-content">${content}${extraText}</div>
+    <div class="cmt-foot">
+      <div class="where">${ic('grid_view')} <b>${esc(c.levelTitle||c.levelId)}</b></div>
+      <button class="btn small tonal" onclick="hideComment('${c.id}',${!c.hidden})">${ic(c.hidden?'visibility':'visibility_off')}</button>
+      <button class="btn small danger" onclick="delComment('${c.id}')">${ic('delete')}</button>
+    </div></div>`;
+}
+
+function userCard(u){
+  const s=sel.users.has(u.id);
+  return `<div class="card ${s?'sel':''} ${u.banned?'dim':''}">
+    ${check('users',u.id)}
+    <img class="ava round" src="${u.avatar||''}" onerror="this.style.visibility='hidden'">
+    <div class="grow">
+      <div class="title-row"><b>${esc(u.name)}</b>${u.banned?`<span class="badge banned">${t('banned')}</span>`:''}</div>
+      <div class="sub-line"><span>${t('id')} ${esc(u.id)}</span><span>${t('joined')} ${dt(u.createdAt)}</span></div>
+    </div>
+    <div class="acts">
+      <button class="btn small tonal" onclick="banUser('${u.id}',${!u.banned})">${ic(u.banned?'lock_open':'block')}${u.banned?t('unban'):t('ban')}</button>
+      <button class="btn small danger" onclick="delUser('${u.id}')">${ic('delete')}</button>
+    </div></div>`;
+}
+
+/* ---------------- settings ---------------- */
+function renderSettings(){
+  return `<div class="section-head"><h2>${t('settings')}</h2></div>
+  <div class="settings-card">
+    <h3>${t('language')}</h3><p>${t('langDesc')}</p>
+    <div class="segmented" id="langseg">
+      <button data-lang="es" class="${lang==='es'?'active':''}">${ic('translate')}${t('spanish')}</button>
+      <button data-lang="en" class="${lang==='en'?'active':''}">${ic('translate')}${t('english')}</button>
+    </div>
+  </div>
+  <div class="settings-card">
+    <h3>${t('session')}</h3><p>${t('sessionDesc')}</p>
+    <button class="btn danger" id="logout">${ic('logout')}${t('logout')}</button>
+  </div>
+  <div class="settings-card">
+    <h3>${t('about')}</h3>
+    <div class="kv"><span class="k">${t('serverVersion')}</span><span class="v">${esc(serverVersion||'—')}</span></div>
+  </div>`;
+}
+function bindSettings(){
+  document.querySelectorAll('#langseg button').forEach(b=>b.onclick=()=>{
+    lang=b.dataset.lang; localStorage.setItem('mvdk_admin_lang',lang);
+    document.documentElement.lang=lang; render();
+  });
+  $('#logout').onclick=()=>{ localStorage.removeItem('mvdk_admin_token'); renderLogin(); };
+}
+
+/* ---------------- modal / detail ---------------- */
+function closeModal(){ $('#modal').innerHTML=''; }
+window.setCmtView=(v)=>{ commentView=v; localStorage.setItem('mvdk_admin_cmtview',v); renderList(); };
+window.viewMemo=(src)=>{ $('#modal').innerHTML=`<div class="scrim" onclick="closeModal()"><div class="dialog" style="max-width:460px" onclick="event.stopPropagation()">
+  <div class="dialog-head"><h2>${t('drawing')}</h2><button class="icon-btn" onclick="closeModal()">${ic('close')}</button></div>
+  <div class="dialog-body"><img class="preview" style="image-rendering:pixelated;max-width:100%" src="${src}"></div></div></div>`; };
+
+window.openLevel = async (id)=>{
+  const r=await api('/api/admin/levels/'+id); if(!r.ok){ return; }
+  const l=await r.json(); const p=l.params||{};
+  const thread=(l.comments||[]).map(c=>{
+    const ava=c.userAvatar?`<img class="cmt-ava" src="${c.userAvatar}" onerror="this.style.visibility='hidden'">`:`<div class="cmt-ava"></div>`;
+    let body;
+    if(c.memo) body=`<img class="drawing" style="image-rendering:pixelated" src="${c.memo}" onclick="viewMemo('${c.memo}')">`;
+    else if(c.stamp) body=`<span class="stamp">🔖</span>`;
+    else body=`<div class="txt">${esc(c.text||'')}</div>`;
+    const extra=(c.memo||c.stamp)&&c.text?`<div class="txt" style="margin-top:4px">${esc(c.text)}</div>`:'';
+    return `<div class="bubble">${ava}<div class="body">
+      <button class="btn small danger delc" onclick="delCommentReload('${c.id}','${id}')">${ic('delete')}</button>
+      <div class="who"><b>${esc(c.userName)}</b><small>${dt(c.createdAt)}</small>${c.hidden?`<span class="badge hidden">${t('hidden')}</span>`:''}</div>
+      ${body}${extra}</div></div>`;
+  }).join('') || `<p style="color:var(--on-surface-var)">${t('noCommentsLevel')}</p>`;
+  $('#modal').innerHTML=`<div class="scrim" onclick="closeModal()"><div class="dialog" onclick="event.stopPropagation()">
+    <div class="dialog-head"><h2>${esc(l.title)}</h2>${l.official?`<span class="badge official">${t('official')}</span>`:''}<button class="icon-btn" onclick="closeModal()">${ic('close')}</button></div>
+    <div class="dialog-body">
+      <div class="sub-line" style="margin-bottom:8px">${t('by')} ${esc(l.authorName)}</div>
+      ${l.thumbnail?`<img class="preview" src="${l.thumbnail}">`:''}
+      <div class="kv">
+        <span class="k">${t('community')}</span><span class="v">${l.official?t('nintendo'):t('usersCommunity')}</span>
+        <span class="k">${t('doors')}</span><span class="v">${p.multiDoor?t('multiDoor'):t('oneDoor',p.doors||1)}</span>
+        <span class="k">${t('goalScore')}</span><span class="v">${p.goalScore!=null?p.goalScore:'—'}</span>
+        <span class="k">${t('dimensions')}</span><span class="v">${p.width?`${p.width} × ${p.height}`:'—'}</span>
+        <span class="k">${t('theme')}</span><span class="v">${esc(p.theme||'—')}</span>
+        <span class="k">👍 ${t('likes')}</span><span class="v">${l.stars}</span>
+        <span class="k">⭐ ${t('stars')}</span><span class="v">${l.tips||0}</span>
+        <span class="k">${t('downloads')}</span><span class="v">${l.downloads||0}</span>
+        <span class="k">${t('dataIds')}</span><span class="v">${esc(l.primaryID||'—')}${l.secondaryID?(' / '+esc(l.secondaryID)):''}</span>
+        <span class="k">${t('published')}</span><span class="v">${dt(l.createdAt)}</span>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
+        <button class="btn tonal ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${ic('verified')}${l.official?t('unofficial'):t('makeOfficial')}</button>
+        <button class="btn outlined" onclick="dlLevel('${l.id}')">${ic('download')}${t('download')}</button>
+        <button class="btn danger" onclick="delLevel('${l.id}')">${ic('delete')}${t('del')}</button>
+      </div>
+      <h3>${t('commentsThread')} (${(l.comments||[]).length})</h3>
+      <div class="thread">${thread}</div>
+    </div></div></div>`;
+};
+window.delCommentReload = async (cid,lid)=>{ if(!confirm(t('confirmComment'))) return; await api(`/api/admin/comments/${cid}`,{method:'DELETE'}); await load(); openLevel(lid); };
+
 window.dlLevel = async (id)=>{
-  const r = await api('/api/admin/levels/'+id+'/download'); if(!r.ok){ alert('Error'); return; }
-  const blob = await r.blob(); const u = URL.createObjectURL(blob);
-  const a = document.createElement('a'); a.href=u; a.download=id+'.mvdklevel.json'; a.click(); URL.revokeObjectURL(u);
+  const r=await api('/api/admin/levels/'+id+'/download'); if(!r.ok) return;
+  const blob=await r.blob(); const u=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=u; a.download=id+'.mvdklevel.json'; a.click(); URL.revokeObjectURL(u);
 };
 async function act(p,opts){ await api(p,opts); closeModal(); await load(); }
 window.setOfficial=(id,v)=>act(`/api/admin/levels/${id}/official`,{method:'POST',body:JSON.stringify({official:v})});
 window.hideLevel=(id,h)=>act(`/api/admin/levels/${id}/hide`,{method:'POST',body:JSON.stringify({hidden:h})});
-window.delLevel=(id)=>{ if(confirm('Delete this level permanently?')) act(`/api/admin/levels/${id}`,{method:'DELETE'}); };
+window.delLevel=(id)=>{ if(confirm(t('confirmLevel'))) act(`/api/admin/levels/${id}`,{method:'DELETE'}); };
 window.hideComment=(id,h)=>act(`/api/admin/comments/${id}/hide`,{method:'POST',body:JSON.stringify({hidden:h})});
-window.delComment=(id)=>{ if(confirm('Delete this comment?')) act(`/api/admin/comments/${id}`,{method:'DELETE'}); };
+window.delComment=(id)=>{ if(confirm(t('confirmComment'))) act(`/api/admin/comments/${id}`,{method:'DELETE'}); };
 window.banUser=(id,b)=>act(`/api/admin/users/${id}/ban`,{method:'POST',body:JSON.stringify({banned:b})});
-window.delUser=(id)=>{ if(confirm('Delete this user?')) act(`/api/admin/users/${id}`,{method:'DELETE'}); };
+window.delUser=(id)=>{ if(confirm(t('confirmUser'))) act(`/api/admin/users/${id}`,{method:'DELETE'}); };
 
+document.documentElement.lang=lang;
 if(token()) load(); else renderLogin();
 </script>
 </body>
