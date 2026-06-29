@@ -236,6 +236,7 @@ const I18N = {
     confirmUser:"¿Borrar este usuario, sus niveles y todos sus comentarios?",
     confirmUsers:n=>`¿Borrar ${n} usuarios (con sus niveles y comentarios)?`,
     drawing:"dibujo", stamp:"sello", noText:"(sin texto)",
+    initialComment:"Comentario inicial", noInitialComment:"(sin comentario inicial)",
     community:"Comunidad", nintendo:"Nintendo (oficial)", usersCommunity:"Usuarios",
     doors:"Puertas", multiDoor:"Varias puertas", oneDoor:n=>`${n} puerta${n===1?'':'s'}`,
     goalScore:"Puntos meta", dimensions:"Dimensiones", theme:"Tema",
@@ -267,6 +268,7 @@ const I18N = {
     confirmUser:"Delete this user, their levels and all their comments?",
     confirmUsers:n=>`Delete ${n} users (with their levels and comments)?`,
     drawing:"drawing", stamp:"stamp", noText:"(no text)",
+    initialComment:"Initial comment", noInitialComment:"(no initial comment)",
     community:"Community", nintendo:"Nintendo (official)", usersCommunity:"Users",
     doors:"Doors", multiDoor:"Multiple doors", oneDoor:n=>`${n} door${n===1?'':'s'}`,
     goalScore:"Goal score", dimensions:"Dimensions", theme:"Theme",
@@ -414,6 +416,7 @@ function levelCard(l){
         <span class="meta-stat">${ic('chat_bubble')}${l.comments||0}</span>
       </div>
       ${l.params?`<div class="sub-line"><span>${l.params.multiDoor?t('multiDoor'):t('oneDoor',l.params.doors||1)}</span><span>${l.params.width}×${l.params.height}</span><span>${esc(l.params.theme||'')}</span></div>`:''}
+      ${(l.body||l.memo)?`<div class="sub-line"><span>${ic('chat')} ${l.memo?`🎨 ${t('drawing')}`:esc(l.body).slice(0,80)}</span></div>`:''}
     </div>
     <div class="acts">
       <button class="btn small tonal ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${ic('verified')}${l.official?t('unofficial'):t('makeOfficial')}</button>
@@ -511,6 +514,15 @@ window.openLevel = async (id)=>{
       <div class="who"><b>${esc(c.userName)}</b><small>${dt(c.createdAt)}</small>${c.hidden?`<span class="badge hidden">${t('hidden')}</span>`:''}</div>
       ${body}${extra}</div></div>`;
   }).join('') || `<p style="color:var(--on-surface-var)">${t('noCommentsLevel')}</p>`;
+  // The author's initial comment (the post "OP") shown first, highlighted.
+  const opAva=l.authorAvatar?`<img class="cmt-ava" src="${l.authorAvatar}" onerror="this.style.visibility='hidden'">`:`<div class="cmt-ava"></div>`;
+  let opBody;
+  if(l.memo) opBody=`<img class="drawing" style="image-rendering:pixelated" src="${l.memo}" onclick="viewMemo('${l.memo}')">`;
+  else opBody=`<div class="txt">${l.body?esc(l.body):`<i style="color:var(--on-surface-var)">${t('noInitialComment')}</i>`}</div>`;
+  const opExtra=l.memo&&l.body?`<div class="txt" style="margin-top:4px">${esc(l.body)}</div>`:'';
+  const opBubble=`<div class="bubble">${opAva}<div class="body" style="background:var(--primary-container);border-radius:16px">
+    <div class="who"><b>${esc(l.authorName)}</b><span class="badge official">${t('initialComment')}</span><small>${dt(l.createdAt)}</small></div>
+    ${opBody}${opExtra}</div></div>`;
   $('#modal').innerHTML=`<div class="scrim" onclick="closeModal()"><div class="dialog" onclick="event.stopPropagation()">
     <div class="dialog-head"><h2>${esc(l.title)}</h2>${l.official?`<span class="badge official">${t('official')}</span>`:''}<button class="icon-btn" onclick="closeModal()">${ic('close')}</button></div>
     <div class="dialog-body">
@@ -534,7 +546,7 @@ window.openLevel = async (id)=>{
         <button class="btn danger" onclick="delLevel('${l.id}')">${ic('delete')}${t('del')}</button>
       </div>
       <h3>${t('commentsThread')} (${(l.comments||[]).length})</h3>
-      <div class="thread">${thread}</div>
+      <div class="thread">${opBubble}${thread}</div>
     </div></div></div>`;
 };
 window.delCommentReload = async (cid,lid)=>{ if(!confirm(t('confirmComment'))) return; await api(`/api/admin/comments/${cid}`,{method:'DELETE'}); await load(); openLevel(lid); };

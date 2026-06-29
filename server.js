@@ -20,7 +20,7 @@ const crypto = require("crypto");
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 const SERVER_NAME = process.env.SERVER_NAME || "MvDK Community Server";
-const VERSION = "0.3.0";
+const VERSION = "0.3.1";
 
 const DATA_DIR = path.join(__dirname, "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
@@ -157,6 +157,8 @@ function publicLevel(l, includeData) {
         id: l.id, title: l.title, authorId: l.authorId, authorName: l.authorName,
         createdAt: l.createdAt, stars: (l.starredBy || []).length, downloads: l.downloads || 0,
         tips: l.tips || 0,
+        // The initial comment the author wrote when publishing (the post "OP").
+        body: l.body || "", memo: l.memo ? "/levels/" + l.id + ".memo.png" : null,
         comments: Object.values(db.comments).filter((c) => c.levelId === l.id && !c.hidden).length,
         thumbnail: l.thumbnail ? "/levels/" + l.id + ".thumb.png" : null,
         hidden: !!l.hidden, official: !!l.official, native: !!l.native, communityType: l.communityType,
@@ -406,6 +408,9 @@ route("GET", "/api/native/levels/:id", async (req, res, params) => {
     if (!l || l.hidden) return bad(res, "not found", 404);
     ok(res, { id: l.id, stars: (l.starredBy || []).length, tips: l.tips || 0,
               downloads: l.downloads || 0,
+              // The initial comment (post body / drawing memo) so the workshop
+              // detail can show it when querying the server for a shared level.
+              body: l.body || "", memo: l.memo ? "/levels/" + l.id + ".memo.png" : null,
               comments: Object.values(db.comments).filter((c) => c.levelId === l.id && !c.hidden).length });
 });
 
@@ -543,6 +548,9 @@ route("GET", "/api/admin/levels/:id", async (req, res, params) => {
         stars: (l.starredBy || []).length, tips: l.tips || 0, downloads: l.downloads || 0,
         primaryID: l.primaryID, secondaryID: l.secondaryID,
         params: l.params || null,
+        // The author's initial comment (post "OP"): text body and/or drawing memo.
+        memo: l.memo ? "/levels/" + l.id + ".memo.png" : null,
+        authorAvatar: (db.users[l.authorId] && db.users[l.authorId].avatar) ? "/avatars/" + l.authorId + ".png" : null,
         thumbnail: l.thumbnail ? "/levels/" + l.id + ".thumb.png" : null,
         comments
     });
