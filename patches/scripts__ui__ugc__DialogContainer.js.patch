@@ -70,11 +70,10 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
              }
          };
  
-@@ -429,6 +473,20 @@
-             }
+@@ -430,6 +474,20 @@
  
              this._commentPosY = this._gpComments[this._gpComments.length - 1].refreshMain(post);
-+
+ 
 +            // Refresh the mola (empathy) / star counts from the server so a
 +            // creator sees what other players gave them, even from the workshop
 +            // self-view where only local counts are otherwise known.
@@ -88,6 +87,26 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
 +                    try { self._layoutGPPanes.lvldeet_yeahs.setText(info.stars); } catch (e) {}
 +                }).catch(function () {});
 +            }
- 
++
              btn = this._gpComments[this._gpComments.length - 1].btn;
              if (!ui.ugc.offlineMode && (post.platformType !== pt.ugc.OFFICIAL_PLATFORM_TYPE)) {
+                 btn.enable();
+@@ -931,11 +989,17 @@
+                 this._layoutTVPanes.lvldeet_postText.setText(lib.util.clampComment(this._layoutTVPanes.lvldeet_postText.text));
+                 this._layoutTVPanes.lvldeet_postTextContainer.visible = true;
+                 this._layoutTVPanes.lvldeet_postImageContainer.visible = false;
+-            } else {
++            } else if (!!post.memo) {
+                 this._textureCache.lvldeet_tv_postMemo.setImage(post.memo);
+                 this._layoutTVPanes.lvldeet_postImage.setTexture(this._textureCache.lvldeet_tv_postMemo);
+                 this._layoutTVPanes.lvldeet_postTextContainer.visible = false;
+                 this._layoutTVPanes.lvldeet_postImageContainer.visible = true;
++            } else {
++                // Community port: levels published with an initial *comment* carry no
++                // post body/memo (the comment lives in the comment list instead).
++                // Hide both panes so no empty black image box shows.
++                this._layoutTVPanes.lvldeet_postTextContainer.visible = false;
++                this._layoutTVPanes.lvldeet_postImageContainer.visible = false;
+             }
+ 
+             var yeahs = pt.ugc.ugcHistory.getLevelYeahCount(post.postID);
