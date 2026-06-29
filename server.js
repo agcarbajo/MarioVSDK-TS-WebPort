@@ -54,6 +54,39 @@ function saveDb() {
     }, 50);
 }
 
+// One-time migration: older clients published the initial comment as a separate
+// comment, leaving the post body empty. The game renders the post itself as the
+// first entry of the comment list (the "OP"), so an empty post showed a black
+// box. Fold each affected level's initial comment (the author's own oldest
+// comment) back into the post body/memo so it renders as the post's own message.
+if (!db.meta || !db.meta.initialCommentMigration) {
+    let migrated = 0;
+    for (const l of Object.values(db.levels)) {
+        if (!l.native) continue;
+        if ((l.body && l.body.length) || l.memo) continue; // already has an OP message
+        const own = Object.values(db.comments)
+            .filter((c) => c.levelId === l.id && c.userId === l.authorId)
+            .sort((a, b) => a.createdAt - b.createdAt);
+        if (!own.length) continue;
+        const c = own[0];
+        if (c.memo) {
+            try {
+                fs.copyFileSync(path.join(COMMENT_DIR, c.id + ".png"), path.join(UPLOAD_DIR, l.id + ".memo.png"));
+                l.memo = true;
+            } catch (e) { continue; }
+            try { fs.unlinkSync(path.join(COMMENT_DIR, c.id + ".png")); } catch (e) {}
+        } else if (c.text) {
+            l.body = String(c.text).slice(0, 280);
+        } else { continue; }
+        delete db.comments[c.id];
+        migrated++;
+    }
+    db.meta = db.meta || {};
+    db.meta.initialCommentMigration = true;
+    if (migrated) console.log("[migration] folded " + migrated + " initial comment(s) into post body/memo");
+    saveDb();
+}
+
 let ADMIN_TOKEN = process.env.ADMIN_TOKEN || "";
 if (!ADMIN_TOKEN) {
     if (fs.existsSync(ADMIN_TOKEN_FILE)) {
