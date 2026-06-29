@@ -357,20 +357,20 @@
         ]).then(function (r) {
             var done = function () { fire(mv, "uploadPostSuccess", { postID: postID, uploadResult: {} }); };
             if (ready()) {
+                // The initial comment IS the post's own message (the "OP"), like
+                // Miiverse: text -> post body, drawing -> post memo. It must NOT be
+                // a separate comment, or it shows up after an empty (black) post
+                // entry in the online comment list.
                 rest().nativeCreatePost({
                     postID: postID,
                     title: levelName || "Nivel",
-                    body: "",  // the initial comment is posted as a real comment below
+                    body: initial.text || "",
+                    memo: initial.memo || "",
                     communityType: communityIdToType(uploadPost && uploadPost.communityID),
                     appData: r[0], screenshot: r[1] || pendingShot,
                     primaryID: dataIDs[0] || "", secondaryID: dataIDs[1] || ""
                 }).then(function () {
                     log("level uploaded to server: " + postID);
-                    // Post the initial comment as a real comment so it shows in the
-                    // comment list and on the server (not just an unstyled body).
-                    if (initial.text || initial.memo) {
-                        return rest().addComment(postID, initial.text || "", "", initial.memo || "").catch(function () {});
-                    }
                 }).then(done, function (e) { log("native post upload failed: " + e.message); done(); });
             } else { done(); }
         });
