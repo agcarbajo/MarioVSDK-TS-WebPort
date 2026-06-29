@@ -146,24 +146,56 @@
         var nextHandle = 1;
         var handles = {};
 
+        // Drive the game loop with the REAL requestAnimationFrame (vsync-aligned)
+        // and cap the rate by skipping frames. The previous implementation ran the
+        // loop on setTimeout, but Android Chrome deprioritizes timer tasks behind
+        // input handling, so rapid touch starved the loop and the game stuttered
+        // until you stopped touching. rAF is serviced every frame regardless of
+        // input volume, which removes that stall while keeping the FPS cap.
+        var nativeRAF = (typeof global.requestAnimationFrame === "function")
+            ? global.requestAnimationFrame.bind(global) : null;
+        var nativeCAF = (typeof global.cancelAnimationFrame === "function")
+            ? global.cancelAnimationFrame.bind(global) : null;
+        function clk() {
+            return (global.performance && performance.now) ? performance.now() : Date.now();
+        }
+
         function limitedRequestAnimationFrame(callback) {
             var handle = nextHandle++;
-            var currentTime = (global.performance && performance.now) ? performance.now() : Date.now();
-            var wait = Math.max(0, getCallbackFrameMs() - (currentTime - lastFrameTime));
-            var timeoutID = global.setTimeout(function () {
-                if (!handles[handle]) return;
-                delete handles[handle];
-                lastFrameTime = (global.performance && performance.now) ? performance.now() : Date.now();
-                callback(lastFrameTime);
-            }, wait);
-            handles[handle] = { timeoutID: timeoutID };
+            var entry = {};
+            handles[handle] = entry;
+            if (nativeRAF) {
+                var step = function () {
+                    if (!handles[handle]) return;
+                    var t = clk();
+                    // Not enough time elapsed for the target frame rate yet: wait
+                    // for the next vsync instead of running the callback now.
+                    if (t - lastFrameTime < getCallbackFrameMs() - 1) {
+                        entry.rafID = nativeRAF(step);
+                        return;
+                    }
+                    delete handles[handle];
+                    lastFrameTime = t;
+                    callback(t);
+                };
+                entry.rafID = nativeRAF(step);
+            } else {
+                var wait = Math.max(0, getCallbackFrameMs() - (clk() - lastFrameTime));
+                entry.timeoutID = global.setTimeout(function () {
+                    if (!handles[handle]) return;
+                    delete handles[handle];
+                    lastFrameTime = clk();
+                    callback(lastFrameTime);
+                }, wait);
+            }
             return handle;
         }
 
         function limitedCancelAnimationFrame(handle) {
             var entry = handles[handle];
             if (!entry) return;
-            global.clearTimeout(entry.timeoutID);
+            if (entry.rafID != null && nativeCAF) nativeCAF(entry.rafID);
+            if (entry.timeoutID != null) global.clearTimeout(entry.timeoutID);
             delete handles[handle];
         }
 
