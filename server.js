@@ -434,7 +434,14 @@ route("GET", "/api/native/datastore/:dataID", async (req, res, params) => {
 route("GET", "/api/native/levels", async (req, res, params, query) => {
     const u = userByToken(req);
     let list = Object.values(db.levels).filter((l) => l.native && !l.hidden);
-    if (query.community !== undefined) list = list.filter((l) => String(l.communityType) === String(query.community));
+    // The admin "official" flag is the single source of truth for which
+    // community a level belongs to: community 1 (Nintendo/official) lists ONLY
+    // admin-marked levels, community 0 (users) lists the rest. Filtering on the
+    // stored communityType let stale values leak levels into the wrong tab.
+    if (query.community !== undefined) {
+        const wantOfficial = String(query.community) === "1";
+        list = list.filter((l) => !!l.official === wantOfficial);
+    }
     list.sort((a, b) => b.createdAt - a.createdAt);
     const out = list.slice(0, 100).map((l) => ({
         id: l.id, title: l.title, body: l.body, authorId: l.authorId, authorName: l.authorName,
