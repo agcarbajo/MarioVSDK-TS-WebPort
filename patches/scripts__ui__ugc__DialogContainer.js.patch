@@ -1,7 +1,7 @@
 diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.js
 --- a/scripts/ui/ugc/DialogContainer.js
 +++ b/scripts/ui/ugc/DialogContainer.js
-@@ -228,18 +228,67 @@
+@@ -228,18 +228,78 @@
  
          DialogContainer.prototype._openComment = function (btn) {
              if (btn.genericButtonAction(false)) {
@@ -57,12 +57,23 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
 +                var sg = pt.ugc.ugcManager && pt.ugc.ugcManager._serviceGroup;
 +                if (sg && sg.destroyCommentCache) sg.destroyCommentCache(post.postID);
 +            } catch (e) {}
++            // Mirror the initial-open path (_onThumbnailClicked): HIDE every
++            // comment slot before reloading. clearData() only wipes their
++            // content but leaves the containers visible, so when the new list
++            // is shorter (a comment was deleted) the leftover slots rendered as
++            // black empty bubbles at stale positions, overlapping the rest.
++            this._gotComments = false;
++            for (var ci = 0; ci < pt.ugc.MAX_COMMENT_DOWNLOAD_COUNT; ci++) {
++                this._gpComments[ci].disable();
++            }
++            this._gettingComments = true;
 +            ui.ugcSignals.clearData.dispatch('comments');
 +            ui.ugcSignals.getComments.dispatch(ui.ugc.activeFilter, post.dataIndex);
-+            // clearData() wiped every comment slot, including the last one that
-+            // holds the post's own message (the OP at the top). The reload only
-+            // fills the downloaded comments, so re-render the OP here - same as
-+            // the game does in _onAddCommentComplete - or it stays a blank gap.
++            try { this.gpLayout.getLayoutData().findPane('miiverse_commentloader').visible = true; } catch (e) {}
++            // clearData() also wiped the last slot, which holds the post's own
++            // message (the OP at the top). The reload only fills the downloaded
++            // comments, so re-render the OP here - same as the game does in
++            // _onAddCommentComplete - or it stays a blank gap.
 +            this._commentPosY = this._gpComments[this._gpComments.length - 1].refreshMain(post);
 +            // Re-fetch the like/star counts from the server.
 +            if (post.postID && window.ChromiumPortCommunity && window.ChromiumPortCommunity.isReady()) {
@@ -75,7 +86,7 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
              }
          };
  
-@@ -430,6 +479,20 @@
+@@ -430,6 +490,20 @@
  
              this._commentPosY = this._gpComments[this._gpComments.length - 1].refreshMain(post);
  
@@ -96,7 +107,7 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
              btn = this._gpComments[this._gpComments.length - 1].btn;
              if (!ui.ugc.offlineMode && (post.platformType !== pt.ugc.OFFICIAL_PLATFORM_TYPE)) {
                  btn.enable();
-@@ -931,11 +994,17 @@
+@@ -931,11 +1005,17 @@
                  this._layoutTVPanes.lvldeet_postText.setText(lib.util.clampComment(this._layoutTVPanes.lvldeet_postText.text));
                  this._layoutTVPanes.lvldeet_postTextContainer.visible = true;
                  this._layoutTVPanes.lvldeet_postImageContainer.visible = false;
