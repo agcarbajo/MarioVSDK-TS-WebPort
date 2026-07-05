@@ -66,9 +66,15 @@
     mv.downloadUserData = function () { fire(mv, "downloadUserDataListSuccess", { users: [] }); };
 
     // Posts: served from the backend so they appear in the native FishBowl.
-    mv.getPostList = function () {
+    // The game says WHICH community it wants via the search param's communityID
+    // ("user-levels" / "nintendo-levels", the ids we provided in
+    // getCommunityList). Previously this was hardcoded to community 0, so the
+    // Nintendo/official tab showed user levels and admin-marked official levels
+    // showed nowhere.
+    mv.getPostList = function (postSearchParam) {
         if (!ready()) { fire(mv, "downloadPostSuccess", { posts: [] }); return; }
-        rest().nativeListPosts(0).then(function (r) {
+        var community = communityIdToType(postSearchParam && postSearchParam.communityID);
+        rest().nativeListPosts(community).then(function (r) {
             var posts = (r.levels || []).map(buildRawPost);
             log("getPostList -> " + posts.length + " post(s) from server");
             fire(mv, "downloadPostSuccess", { posts: posts });
