@@ -4,200 +4,230 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>MvDK Community — Admin</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@24,400,0,0&family=Roboto+Flex:opsz,wght@8..144,400;8..144,500;8..144,600;8..144,700&display=swap" rel="stylesheet">
 <style>
-  /* ---- Material 3 Expressive tokens (dark, gold-tonal) ---- */
+  /* ---- Fluent 2 design tokens (dark default, light via media query) ---- */
   :root {
-    --primary:#ffd24a; --on-primary:#3e2e00; --primary-container:#5a4500; --on-primary-container:#ffe08a;
-    --secondary:#cfc6a3; --secondary-container:#4b4626; --on-secondary-container:#ece2bd;
-    --tertiary:#8fd0c0; --tertiary-container:#1f4d44; --on-tertiary-container:#aeede0;
-    --error:#ffb4ab; --error-container:#5d1620; --on-error-container:#ffdad6;
-    --surface:#14130c; --surface-dim:#14130c; --surface-bright:#3b3a30;
-    --surface-c-lowest:#0e0d07; --surface-c-low:#1c1b13; --surface-c:#201f17; --surface-c-high:#2b2a21; --surface-c-highest:#36352b;
-    --on-surface:#e8e2d4; --on-surface-var:#cdc6b3; --outline:#979080; --outline-variant:#4b4839;
-    --shadow:rgba(0,0,0,.5);
-    --r-xs:8px; --r-s:12px; --r-m:16px; --r-l:24px; --r-xl:28px; --r-full:999px;
+    --brand:#479EF5; --brand-hover:#62abf5; --brand-pressed:#2886de; --on-brand:#0a1a2b;
+    --bg:#1b1a19; --bg-2:#201f1e; --card:#292827; --card-hover:#2f2e2d; --card-2:#323130;
+    --stroke:#3b3a39; --stroke-2:#4a4948;
+    --text:#ffffff; --text-2:#d6d6d6; --text-3:#9d9d9d; --text-disabled:#6b6b6b;
+    --danger:#dc626d; --danger-bg:#3b1e21; --danger-text:#eeacb2;
+    --ok:#6ccb5f; --warn:#fce100;
+    --shadow-2:0 1px 2px rgba(0,0,0,.24), 0 0 2px rgba(0,0,0,.12);
+    --shadow-8:0 4px 8px rgba(0,0,0,.28), 0 0 2px rgba(0,0,0,.12);
+    --shadow-16:0 8px 16px rgba(0,0,0,.28), 0 0 2px rgba(0,0,0,.12);
+    --shadow-64:0 32px 64px rgba(0,0,0,.4), 0 0 8px rgba(0,0,0,.2);
+    --r-s:4px; --r-m:8px;
   }
   @media (prefers-color-scheme: light) {
     :root {
-      --primary:#785a00; --on-primary:#ffffff; --primary-container:#ffe08a; --on-primary-container:#251a00;
-      --secondary:#69624a; --secondary-container:#f1e7c6; --on-secondary-container:#211b04;
-      --tertiary:#37665b; --tertiary-container:#bbece0; --on-tertiary-container:#00201a;
-      --error:#ba1a1a; --error-container:#ffdad6; --on-error-container:#410002;
-      --surface:#fdf9ee; --surface-dim:#ded9cc; --surface-bright:#fdf9ee;
-      --surface-c-lowest:#ffffff; --surface-c-low:#f7f2e6; --surface-c:#f2ece0; --surface-c-high:#ece6da; --surface-c-highest:#e6e0d4;
-      --on-surface:#1c1b14; --on-surface-var:#4b4839; --outline:#7c7768; --outline-variant:#cdc6b3;
-      --shadow:rgba(0,0,0,.2);
+      --brand:#0F6CBD; --brand-hover:#115EA3; --brand-pressed:#0C3B5E; --on-brand:#ffffff;
+      --bg:#faf9f8; --bg-2:#f3f2f1; --card:#ffffff; --card-hover:#f5f5f5; --card-2:#fafafa;
+      --stroke:#e1dfdd; --stroke-2:#c8c6c4;
+      --text:#242424; --text-2:#424242; --text-3:#616161; --text-disabled:#bdbdbd;
+      --danger:#c50f1f; --danger-bg:#fdf3f4; --danger-text:#b10e1c;
+      --shadow-2:0 1px 2px rgba(0,0,0,.14), 0 0 2px rgba(0,0,0,.12);
+      --shadow-8:0 4px 8px rgba(0,0,0,.14), 0 0 2px rgba(0,0,0,.12);
+      --shadow-16:0 8px 16px rgba(0,0,0,.14), 0 0 2px rgba(0,0,0,.12);
+      --shadow-64:0 32px 64px rgba(0,0,0,.24), 0 0 8px rgba(0,0,0,.1);
     }
   }
   * { box-sizing:border-box; }
   html,body { height:100%; }
-  body { margin:0; font-family:"Roboto Flex",system-ui,Segoe UI,Arial,sans-serif; background:var(--surface); color:var(--on-surface); -webkit-font-smoothing:antialiased; }
-  .ico { font-family:"Material Symbols Rounded"; font-weight:normal; font-style:normal; line-height:1; vertical-align:middle; -webkit-font-feature-settings:'liga'; }
-  .ico.fill { font-variation-settings:'FILL' 1; }
+  body { margin:0; background:var(--bg); color:var(--text); -webkit-font-smoothing:antialiased;
+         font:14px/1.45 "Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,sans-serif; }
+  .ico { width:16px; height:16px; flex:0 0 auto; vertical-align:-2px; }
 
-  /* ---- buttons ---- */
-  button { font:inherit; cursor:pointer; border:none; background:none; color:inherit; }
-  .btn { display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 20px; border-radius:var(--r-full);
-         font-weight:600; font-size:14px; transition:.15s; white-space:nowrap; }
-  .btn .ico { font-size:18px; }
-  .btn.filled { background:var(--primary); color:var(--on-primary); }
-  .btn.filled:hover { box-shadow:0 1px 3px var(--shadow); filter:brightness(1.05); }
-  .btn.tonal { background:var(--secondary-container); color:var(--on-secondary-container); }
-  .btn.tonal:hover { filter:brightness(1.1); }
-  .btn.tonal.on { background:var(--primary); color:var(--on-primary); }
-  .btn.outlined { border:1px solid var(--outline); color:var(--primary); }
-  .btn.outlined:hover { background:color-mix(in srgb,var(--primary) 8%,transparent); }
-  .btn.text { padding:0 12px; color:var(--primary); }
-  .btn.text:hover { background:color-mix(in srgb,var(--primary) 8%,transparent); }
-  .btn.danger { background:var(--error-container); color:var(--on-error-container); }
-  .btn.danger:hover { filter:brightness(1.12); }
-  .btn.small { height:32px; padding:0 14px; font-size:13px; }
-  .icon-btn { width:40px; height:40px; border-radius:var(--r-full); display:inline-flex; align-items:center; justify-content:center; color:var(--on-surface-var); }
-  .icon-btn:hover { background:color-mix(in srgb,var(--on-surface) 8%,transparent); }
-  .icon-btn .ico { font-size:22px; }
+  /* ---- buttons (Fluent) ---- */
+  button { font:inherit; color:inherit; cursor:pointer; background:none; border:none; }
+  .btn { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 12px;
+         border-radius:var(--r-s); border:1px solid var(--stroke-2); background:var(--card);
+         font-weight:600; font-size:13px; transition:background .08s, border-color .08s; white-space:nowrap; }
+  .btn:hover { background:var(--card-hover); }
+  .btn:active { background:var(--card-2); }
+  .btn.primary { background:var(--brand); border-color:var(--brand); color:var(--on-brand); }
+  .btn.primary:hover { background:var(--brand-hover); border-color:var(--brand-hover); }
+  .btn.primary:active { background:var(--brand-pressed); }
+  .btn.danger { background:transparent; border-color:var(--stroke-2); color:var(--danger); }
+  .btn.danger:hover { background:var(--danger-bg); border-color:var(--danger); }
+  .btn.subtle { border-color:transparent; background:transparent; color:var(--text-2); }
+  .btn.subtle:hover { background:var(--card-hover); color:var(--text); }
+  .btn.on { background:var(--brand); border-color:var(--brand); color:var(--on-brand); }
+  .btn.sm { height:28px; padding:0 8px; font-size:12px; }
+  .iconbtn { display:inline-flex; align-items:center; justify-content:center; width:32px; height:32px;
+             border-radius:var(--r-s); color:var(--text-2); }
+  .iconbtn:hover { background:var(--card-hover); color:var(--text); }
 
-  /* ---- app shell ---- */
-  .topbar { position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:16px;
-            padding:14px 24px; background:var(--surface-c); }
-  .topbar .logo { width:40px; height:40px; border-radius:var(--r-s); background:var(--primary-container); color:var(--on-primary-container);
-                  display:flex; align-items:center; justify-content:center; }
-  .topbar .logo .ico { font-size:24px; }
-  .topbar h1 { font-size:20px; font-weight:600; margin:0; letter-spacing:.1px; }
-  .topbar .sub { font-size:12px; color:var(--on-surface-var); margin-top:2px; }
-  .topbar .spacer { flex:1; }
-  .stats { display:flex; gap:8px; }
-  .chip-stat { display:inline-flex; align-items:center; gap:6px; height:32px; padding:0 14px; border-radius:var(--r-xs);
-               background:var(--surface-c-high); color:var(--on-surface-var); font-size:13px; font-weight:500; }
-  .chip-stat b { color:var(--on-surface); }
+  /* ---- title bar ---- */
+  .titlebar { position:sticky; top:0; z-index:10; display:flex; align-items:center; gap:12px;
+              height:52px; padding:0 20px; background:var(--bg-2); border-bottom:1px solid var(--stroke); }
+  .titlebar .logo { width:28px; height:28px; border-radius:var(--r-s); background:var(--brand);
+                    color:var(--on-brand); display:flex; align-items:center; justify-content:center; }
+  .titlebar .logo .ico { width:18px; height:18px; }
+  .titlebar h1 { font-size:15px; font-weight:600; margin:0; }
+  .titlebar .sub { font-size:11px; color:var(--text-3); }
+  .titlebar .spacer { flex:1; }
+  .stat { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--text-3);
+          padding:4px 10px; border:1px solid var(--stroke); border-radius:999px; background:var(--card); }
+  .stat b { color:var(--text); font-weight:600; }
 
-  nav.tabs { display:flex; gap:8px; padding:10px 24px; background:var(--surface-c); flex-wrap:wrap; position:sticky; top:69px; z-index:9; }
-  nav.tabs .tab { display:inline-flex; align-items:center; gap:8px; height:40px; padding:0 18px; border-radius:var(--r-full);
-                  font-weight:600; font-size:14px; color:var(--on-surface-var); background:transparent; transition:.15s; }
-  nav.tabs .tab:hover { background:color-mix(in srgb,var(--on-surface) 6%,transparent); }
-  nav.tabs .tab.active { background:var(--secondary-container); color:var(--on-secondary-container); }
-  nav.tabs .tab.active .ico { font-variation-settings:'FILL' 1; }
-  nav.tabs .tab .ico { font-size:20px; }
+  /* ---- pivots (Fluent tabs) ---- */
+  .pivots { display:flex; gap:4px; padding:4px 20px 0; background:var(--bg-2); border-bottom:1px solid var(--stroke);
+            position:sticky; top:52px; z-index:9; }
+  .pivot { position:relative; display:inline-flex; align-items:center; gap:7px; padding:10px 12px 12px;
+           font-weight:600; font-size:14px; color:var(--text-3); border-radius:var(--r-s) var(--r-s) 0 0; }
+  .pivot:hover { color:var(--text); background:var(--card-hover); }
+  .pivot.active { color:var(--text); }
+  .pivot.active::after { content:""; position:absolute; left:10px; right:10px; bottom:0; height:3px;
+                         border-radius:2px; background:var(--brand); }
 
-  main { padding:20px 24px 80px; max-width:1100px; margin:0 auto; }
-  .section-head { display:flex; align-items:center; gap:12px; margin:4px 2px 16px; }
-  .section-head h2 { margin:0; font-size:22px; font-weight:600; }
+  main { padding:18px 20px 70px; max-width:1080px; margin:0 auto; }
+  .section-head { display:flex; align-items:center; gap:10px; margin:2px 0 14px; }
+  .section-head h2 { margin:0; font-size:19px; font-weight:600; }
   .section-head .spacer { flex:1; }
 
   /* ---- segmented (view toggle / language) ---- */
-  .segmented { display:inline-flex; border:1px solid var(--outline); border-radius:var(--r-full); overflow:hidden; height:40px; }
-  .segmented button { display:inline-flex; align-items:center; gap:6px; padding:0 16px; font-weight:600; font-size:13px; color:var(--on-surface-var); }
-  .segmented button + button { border-left:1px solid var(--outline); }
-  .segmented button.active { background:var(--secondary-container); color:var(--on-secondary-container); }
-  .segmented button.active .ico { font-variation-settings:'FILL' 1; }
-  .segmented .ico { font-size:18px; }
+  .segmented { display:inline-flex; border:1px solid var(--stroke-2); border-radius:var(--r-s); overflow:hidden; height:32px; }
+  .segmented button { display:inline-flex; align-items:center; gap:6px; padding:0 12px; font-weight:600;
+                      font-size:12px; color:var(--text-2); }
+  .segmented button + button { border-left:1px solid var(--stroke-2); }
+  .segmented button:hover { background:var(--card-hover); }
+  .segmented button.active { background:var(--brand); color:var(--on-brand); }
 
   /* ---- selection bar ---- */
-  .selbar { display:flex; align-items:center; gap:12px; background:var(--primary-container); color:var(--on-primary-container);
-            border-radius:var(--r-full); padding:8px 10px 8px 18px; margin-bottom:16px; }
-  .selbar b { font-size:15px; }
+  .selbar { display:flex; align-items:center; gap:10px; background:var(--card); border:1px solid var(--brand);
+            border-left:4px solid var(--brand); border-radius:var(--r-s); padding:8px 8px 8px 14px; margin-bottom:14px;
+            box-shadow:var(--shadow-2); }
+  .selbar b { font-size:13px; }
   .selbar .spacer { flex:1; }
 
-  /* ---- cards ---- */
-  .card { background:var(--surface-c-low); border-radius:var(--r-l); padding:14px; margin-bottom:12px;
-          display:flex; gap:14px; align-items:center; transition:.15s; }
-  .card.sel { background:var(--secondary-container); outline:2px solid var(--primary); }
+  /* ---- checkbox (Fluent) ---- */
+  .check { width:18px; height:18px; flex:0 0 auto; border-radius:var(--r-s); border:1px solid var(--stroke-2);
+           display:flex; align-items:center; justify-content:center; color:transparent; cursor:pointer;
+           background:var(--bg-2); transition:.08s; }
+  .check:hover { border-color:var(--text-3); }
+  .check.on { background:var(--brand); border-color:var(--brand); color:var(--on-brand); }
+  .check .ico { width:12px; height:12px; }
+
+  /* ---- cards / rows ---- */
+  .card { background:var(--card); border:1px solid var(--stroke); border-radius:var(--r-m); padding:12px;
+          margin-bottom:10px; display:flex; gap:12px; align-items:center; box-shadow:var(--shadow-2); transition:.08s; }
+  .card:hover { background:var(--card-hover); }
+  .card.sel { border-color:var(--brand); outline:1px solid var(--brand); }
   .card.dim { opacity:.55; }
-  .check { width:24px; height:24px; flex:0 0 auto; border-radius:6px; border:2px solid var(--outline);
-           display:flex; align-items:center; justify-content:center; color:transparent; transition:.12s; cursor:pointer; }
-  .check.on { background:var(--primary); border-color:var(--primary); color:var(--on-primary); }
-  .check .ico { font-size:18px; }
-  .thumb { width:88px; height:64px; border-radius:var(--r-m); object-fit:cover; background:var(--surface-c-high); flex:0 0 auto; }
-  .ava { width:52px; height:52px; border-radius:var(--r-m); object-fit:cover; background:var(--surface-c-high); flex:0 0 auto; }
-  .ava.round { border-radius:var(--r-full); }
+  .thumb { width:84px; height:60px; border-radius:var(--r-s); object-fit:cover; background:var(--bg-2);
+           border:1px solid var(--stroke); flex:0 0 auto; }
+  .ava { width:44px; height:44px; border-radius:var(--r-s); object-fit:cover; background:var(--bg-2); flex:0 0 auto; }
+  .ava.round { border-radius:50%; }
   .grow { flex:1; min-width:0; }
   .grow.click { cursor:pointer; }
   .title-row { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .title-row b { font-size:16px; font-weight:600; }
-  .sub-line { color:var(--on-surface-var); font-size:13px; margin-top:3px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-  .sub-line .ico { font-size:15px; margin-right:2px; }
-  .meta-stat { display:inline-flex; align-items:center; }
-  .badge { font-size:11px; font-weight:700; border-radius:var(--r-full); padding:2px 10px; letter-spacing:.3px; }
-  .badge.official { background:var(--primary); color:var(--on-primary); }
-  .badge.hidden { background:var(--surface-c-highest); color:var(--on-surface-var); }
-  .badge.banned { background:var(--error-container); color:var(--on-error-container); }
-  .acts { display:flex; gap:6px; flex-wrap:wrap; justify-content:flex-end; flex:0 0 auto; }
+  .title-row b { font-size:14px; font-weight:600; overflow:hidden; text-overflow:ellipsis; }
+  .sub-line { color:var(--text-3); font-size:12px; margin-top:2px; display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .sub-line .ico { width:13px; height:13px; }
+  .meta-stat { display:inline-flex; align-items:center; gap:3px; }
+  .badge { font-size:10px; font-weight:700; border-radius:var(--r-s); padding:2px 7px; letter-spacing:.4px;
+           border:1px solid transparent; text-transform:uppercase; }
+  .badge.official { background:var(--brand); color:var(--on-brand); }
+  .badge.hidden { background:var(--card-2); color:var(--text-3); border-color:var(--stroke-2); }
+  .badge.banned { background:var(--danger-bg); color:var(--danger-text); border-color:var(--danger); }
+  .acts { display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end; flex:0 0 auto; }
 
-  /* ---- comments (homogeneous) ---- */
-  .cmt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
-  .cmt-list { display:flex; flex-direction:column; gap:12px; }
-  .cmt-card { background:var(--surface-c-low); border-radius:var(--r-l); padding:14px; display:flex; flex-direction:column; gap:10px; transition:.15s; }
-  .cmt-card.sel { background:var(--secondary-container); outline:2px solid var(--primary); }
+  /* ---- comments: UNIFORM cards so mixed drawing/text rows leave no gaps ---- */
+  .cmt-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:10px; }
+  .cmt-list { display:flex; flex-direction:column; gap:10px; }
+  .cmt-card { background:var(--card); border:1px solid var(--stroke); border-radius:var(--r-m); padding:12px;
+              display:flex; flex-direction:column; gap:10px; box-shadow:var(--shadow-2); transition:.08s; }
+  .cmt-card:hover { background:var(--card-hover); }
+  .cmt-card.sel { border-color:var(--brand); outline:1px solid var(--brand); }
   .cmt-card.dim { opacity:.55; }
   .cmt-top { display:flex; align-items:center; gap:10px; }
-  .cmt-ava { width:36px; height:36px; border-radius:var(--r-full); object-fit:cover; background:var(--surface-c-high); flex:0 0 auto; }
+  .cmt-ava { width:32px; height:32px; border-radius:50%; object-fit:cover; background:var(--bg-2); flex:0 0 auto; }
   .cmt-who { flex:1; min-width:0; }
-  .cmt-who b { font-size:14px; font-weight:600; display:block; }
-  .cmt-who small { color:var(--on-surface-var); font-size:12px; }
-  .cmt-content { display:flex; gap:12px; align-items:flex-start; }
-  .cmt-content .drawing { width:140px; height:56px; object-fit:contain; background:#fff; border-radius:var(--r-s); flex:0 0 auto; cursor:pointer; }
-  .cmt-grid .cmt-content { flex-direction:column; }
-  .cmt-grid .cmt-content .drawing { width:100%; height:130px; }
-  .cmt-content .stamp { width:56px; height:56px; border-radius:var(--r-s); background:var(--surface-c-high); display:flex; align-items:center; justify-content:center; font-size:30px; flex:0 0 auto; }
-  .cmt-content .text { font-size:14px; line-height:1.5; word-break:break-word; align-self:center; }
-  .cmt-foot { display:flex; align-items:center; gap:8px; }
-  .cmt-foot .where { flex:1; min-width:0; color:var(--on-surface-var); font-size:12px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .cmt-foot .where b { color:var(--on-surface); }
+  .cmt-who b { font-size:13px; font-weight:600; display:block; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cmt-who small { color:var(--text-3); font-size:11px; }
+  /* The content zone has the SAME height for every card in a view, whether it
+     holds a drawing, a stamp or plain text - so rows always align. */
+  .cmt-content { display:flex; align-items:center; justify-content:center; border-radius:var(--r-s);
+                 background:var(--bg-2); border:1px solid var(--stroke); overflow:hidden; }
+  .cmt-list .cmt-content { height:72px; }
+  .cmt-grid .cmt-content { height:120px; }
+  .cmt-content img.drawing { width:100%; height:100%; object-fit:contain; background:#fff; cursor:pointer;
+                             image-rendering:pixelated; }
+  .cmt-content .stamp { font-size:30px; }
+  .cmt-content .text { padding:8px 12px; font-size:13px; line-height:1.45; overflow:hidden; text-align:center;
+                       display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; word-break:break-word; }
+  .cmt-grid .cmt-content .text { -webkit-line-clamp:5; }
+  /* Always-present one-line slot for the text that accompanies a drawing, so
+     cards with and without it still have identical heights. */
+  .cmt-extra { font-size:12px; color:var(--text-2); height:18px; line-height:18px;
+               overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cmt-foot { display:flex; align-items:center; gap:6px; }
+  .cmt-foot .where { flex:1; min-width:0; color:var(--text-3); font-size:11px; display:flex; align-items:center; gap:5px;
+                     overflow:hidden; }
+  .cmt-foot .where span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cmt-foot .where b { color:var(--text-2); }
 
-  .empty { color:var(--on-surface-var); padding:60px 20px; text-align:center; }
-  .empty .ico { font-size:56px; display:block; margin-bottom:12px; color:var(--outline); }
+  .empty { color:var(--text-3); padding:56px 20px; text-align:center; }
+  .empty .ico { width:44px; height:44px; display:block; margin:0 auto 10px; color:var(--stroke-2); }
 
   /* ---- login ---- */
   .login-wrap { min-height:100vh; display:flex; align-items:center; justify-content:center; padding:24px; }
-  .login { background:var(--surface-c-low); border-radius:var(--r-xl); padding:32px; max-width:420px; width:100%; }
-  .login .logo { width:64px; height:64px; border-radius:var(--r-l); background:var(--primary-container); color:var(--on-primary-container);
-                 display:flex; align-items:center; justify-content:center; margin:0 auto 18px; }
-  .login .logo .ico { font-size:36px; }
-  .login h2 { margin:0 0 6px; text-align:center; font-size:24px; font-weight:600; }
-  .login p { color:var(--on-surface-var); margin:0 0 22px; text-align:center; font-size:14px; }
-  .field { position:relative; margin-bottom:16px; }
-  .field input { width:100%; height:56px; padding:0 16px; border-radius:var(--r-xs); border:1px solid var(--outline);
-                 background:transparent; color:var(--on-surface); font:inherit; }
-  .field input:focus { outline:none; border:2px solid var(--primary); padding:0 15px; }
-  .login .btn.filled { width:100%; justify-content:center; height:48px; }
-  .err { color:var(--error); font-size:13px; margin:-6px 0 14px; text-align:center; }
+  .login { background:var(--card); border:1px solid var(--stroke); border-radius:var(--r-m); padding:30px;
+           max-width:400px; width:100%; box-shadow:var(--shadow-16); }
+  .login .logo { width:52px; height:52px; border-radius:var(--r-m); background:var(--brand); color:var(--on-brand);
+                 display:flex; align-items:center; justify-content:center; margin:0 auto 16px; }
+  .login .logo .ico { width:28px; height:28px; }
+  .login h2 { margin:0 0 4px; text-align:center; font-size:20px; font-weight:600; }
+  .login p { color:var(--text-3); margin:0 0 20px; text-align:center; font-size:13px; }
+  .field input { width:100%; height:32px; padding:0 10px; border-radius:var(--r-s);
+                 border:1px solid var(--stroke-2); border-bottom:2px solid var(--stroke-2);
+                 background:var(--bg-2); color:var(--text); font:inherit; margin-bottom:14px; }
+  .field input:focus { outline:none; border-bottom-color:var(--brand); }
+  .login .btn.primary { width:100%; justify-content:center; height:36px; }
+  .err { color:var(--danger); font-size:12px; margin:-4px 0 12px; text-align:center; }
 
-  /* ---- modal ---- */
-  .scrim { position:fixed; inset:0; background:rgba(0,0,0,.55); display:flex; align-items:center; justify-content:center; z-index:50; padding:20px; }
-  .dialog { background:var(--surface-c-high); border-radius:var(--r-xl); max-width:720px; width:100%; max-height:92vh; overflow:auto; }
-  .dialog-head { display:flex; align-items:center; gap:12px; padding:20px 24px 8px; }
-  .dialog-head h2 { margin:0; font-size:22px; font-weight:600; flex:1; }
-  .dialog-body { padding:8px 24px 24px; }
-  .preview { width:100%; max-width:380px; border-radius:var(--r-m); background:var(--surface-c); display:block; margin:6px 0 16px; }
-  .kv { display:grid; grid-template-columns:auto 1fr; gap:10px 18px; margin:8px 0 18px; font-size:14px; }
-  .kv .k { color:var(--on-surface-var); }
+  /* ---- dialog ---- */
+  .scrim { position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex; align-items:center;
+           justify-content:center; z-index:50; padding:20px; }
+  .dialog { background:var(--card); border:1px solid var(--stroke); border-radius:var(--r-m); max-width:700px;
+            width:100%; max-height:92vh; overflow:auto; box-shadow:var(--shadow-64); }
+  .dialog-head { display:flex; align-items:center; gap:10px; padding:16px 20px 6px; }
+  .dialog-head h2 { margin:0; font-size:18px; font-weight:600; flex:1; }
+  .dialog-body { padding:6px 20px 20px; }
+  .preview { width:100%; max-width:360px; border-radius:var(--r-s); border:1px solid var(--stroke);
+             background:var(--bg-2); display:block; margin:6px 0 14px; }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:7px 16px; margin:6px 0 16px; font-size:13px; }
+  .kv .k { color:var(--text-3); }
   .kv .v { font-weight:500; }
-  .dialog h3 { font-size:16px; font-weight:600; margin:18px 0 12px; }
+  .dialog h3 { font-size:14px; font-weight:600; margin:16px 0 10px; color:var(--text-2);
+               text-transform:uppercase; letter-spacing:.4px; }
 
-  /* thread (chat-style, ascending) */
-  .thread { display:flex; flex-direction:column; gap:14px; }
-  .bubble { display:flex; gap:10px; }
-  .bubble .cmt-ava { width:34px; height:34px; }
-  .bubble .body { flex:1; min-width:0; background:var(--surface-c-low); border-radius:4px 16px 16px 16px; padding:10px 14px; }
-  .bubble .body .who { display:flex; align-items:center; gap:8px; margin-bottom:4px; }
-  .bubble .body .who b { font-size:13px; font-weight:600; }
-  .bubble .body .who small { color:var(--on-surface-var); font-size:11px; }
-  .bubble .body .txt { font-size:14px; line-height:1.45; word-break:break-word; }
-  .bubble .body img.drawing { width:160px; max-width:100%; object-fit:contain; background:#fff; border-radius:var(--r-s); margin-top:4px; }
-  .bubble .body .stamp { font-size:30px; }
+  /* thread (ascending) */
+  .thread { display:flex; flex-direction:column; gap:10px; }
+  .bubble { display:flex; gap:9px; }
+  .bubble .cmt-ava { width:30px; height:30px; }
+  .bubble .body { flex:1; min-width:0; background:var(--bg-2); border:1px solid var(--stroke);
+                  border-radius:var(--r-s); padding:9px 12px; }
+  .bubble.op .body { border-left:3px solid var(--brand); }
+  .bubble .body .who { display:flex; align-items:center; gap:8px; margin-bottom:3px; }
+  .bubble .body .who b { font-size:12px; font-weight:600; }
+  .bubble .body .who small { color:var(--text-3); font-size:11px; }
+  .bubble .body .txt { font-size:13px; line-height:1.45; word-break:break-word; }
+  .bubble .body img.drawing { width:160px; max-width:100%; object-fit:contain; background:#fff;
+                              border:1px solid var(--stroke); border-radius:var(--r-s); margin-top:4px;
+                              image-rendering:pixelated; cursor:pointer; }
+  .bubble .body .stamp { font-size:26px; }
   .bubble .body .delc { float:right; }
 
   /* settings */
-  .settings-card { background:var(--surface-c-low); border-radius:var(--r-l); padding:20px 22px; margin-bottom:14px; }
-  .settings-card h3 { margin:0 0 4px; font-size:16px; font-weight:600; }
-  .settings-card p { margin:0 0 16px; color:var(--on-surface-var); font-size:13px; }
-  .settings-row { display:flex; align-items:center; gap:16px; }
-  .settings-row .grow { flex:1; }
+  .settings-card { background:var(--card); border:1px solid var(--stroke); border-radius:var(--r-m);
+                   padding:16px 18px; margin-bottom:12px; box-shadow:var(--shadow-2); }
+  .settings-card h3 { margin:0 0 2px; font-size:14px; font-weight:600; }
+  .settings-card p { margin:0 0 12px; color:var(--text-3); font-size:12px; }
 
   @media (max-width:640px){
-    .topbar .stats { display:none; }
+    .titlebar .stats { display:none; }
     .acts { width:100%; justify-content:flex-start; }
     .card { flex-wrap:wrap; }
   }
@@ -211,7 +241,30 @@ const $ = (s,r=document)=>r.querySelector(s);
 const api = (p,opts={}) => fetch(p, Object.assign({headers:{'X-Admin-Token':token(),'Content-Type':'application/json'}}, opts));
 const token = () => localStorage.getItem('mvdk_admin_token') || '';
 const esc = s => String(s==null?'':s).replace(/[&<>"]/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ic = n => `<span class="ico">${n}</span>`;
+
+/* ---------------- Fluent-style inline SVG icons ---------------- */
+const PATHS = {
+  close:'M4.3 4.3a1 1 0 0 1 1.4 0L10 8.6l4.3-4.3a1 1 0 1 1 1.4 1.4L11.4 10l4.3 4.3a1 1 0 0 1-1.4 1.4L10 11.4l-4.3 4.3a1 1 0 0 1-1.4-1.4L8.6 10 4.3 5.7a1 1 0 0 1 0-1.4z',
+  check:'M16.7 5.3a1 1 0 0 1 0 1.4l-7.5 7.5a1 1 0 0 1-1.4 0L3.3 9.7a1 1 0 1 1 1.4-1.4l3.8 3.8 6.8-6.8a1 1 0 0 1 1.4 0z',
+  trash:'M8 2h4a1 1 0 0 1 1 1v1h4a1 1 0 1 1 0 2h-.6l-.9 10.1A2 2 0 0 1 13.5 18h-7a2 2 0 0 1-2-1.9L3.6 6H3a1 1 0 0 1 0-2h4V3a1 1 0 0 1 1-1zM5.6 6l.9 10h7l.9-10H5.6zM8 8a.8.8 0 0 1 .8.8v5.4a.8.8 0 0 1-1.6 0V8.8A.8.8 0 0 1 8 8zm4 0a.8.8 0 0 1 .8.8v5.4a.8.8 0 0 1-1.6 0V8.8A.8.8 0 0 1 12 8z',
+  eye:'M10 5c3.9 0 6.8 2.7 8 5-1.2 2.3-4.1 5-8 5s-6.8-2.7-8-5c1.2-2.3 4.1-5 8-5zm0 2a3 3 0 1 0 0 6 3 3 0 0 0 0-6zm0 1.6a1.4 1.4 0 1 1 0 2.8 1.4 1.4 0 0 1 0-2.8z',
+  eyeoff:'M3.3 2.3 17.7 16.7l-1.4 1.4-2.5-2.5c-1.1.5-2.4.8-3.8.8-3.9 0-6.8-2.7-8-5 .6-1.2 1.7-2.5 3-3.5L1.9 3.7l1.4-1.4zM10 5c3.9 0 6.8 2.7 8 5-.5 1-1.3 2.1-2.4 3l-2.4-2.4A3 3 0 0 0 9.4 7L7.6 5.3C8.4 5.1 9.2 5 10 5zM6.4 8.5l1.7 1.6a2 2 0 0 0 1.8 1.8l1.6 1.7a3 3 0 0 1-5.1-5.1z',
+  download:'M10 2a1 1 0 0 1 1 1v7.6l2.3-2.3a1 1 0 1 1 1.4 1.4l-4 4a1 1 0 0 1-1.4 0l-4-4a1 1 0 1 1 1.4-1.4L9 10.6V3a1 1 0 0 1 1-1zM4 16a1 1 0 0 1 1-1h10a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1z',
+  star:'M10 2.5l2.1 4.6 5 .6-3.7 3.4 1 4.9L10 13.5 5.6 16l1-4.9L2.9 7.7l5-.6L10 2.5z',
+  person:'M10 2a4 4 0 1 1 0 8 4 4 0 0 1 0-8zm0 9c3.9 0 7 1.8 7 4v1a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-1c0-2.2 3.1-4 7-4z',
+  grid:'M3 3h6v6H3V3zm8 0h6v6h-6V3zM3 11h6v6H3v-6zm8 0h6v6h-6v-6z',
+  chat:'M10 2c4.4 0 8 3 8 6.8 0 3.7-3.6 6.7-8 6.7-.8 0-1.6-.1-2.3-.3L4 17.4c-.7.4-1.5-.3-1.3-1l.8-2.8C2.6 12.4 2 10.7 2 8.8 2 5 5.6 2 10 2z',
+  gear:'M8.6 2h2.8l.5 2 1.6.9 1.9-.8 1.4 2.4-1.4 1.4v1.9l1.4 1.4-1.4 2.4-1.9-.8-1.6.9-.5 2H8.6l-.5-2-1.6-.9-1.9.8-1.4-2.4 1.4-1.4V9.9L3.2 8.5l1.4-2.4 1.9.8 1.6-.9.5-2zM10 7.5A2.5 2.5 0 1 0 10 12.5 2.5 2.5 0 0 0 10 7.5z',
+  ban:'M10 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zM4.7 6.1a6 6 0 0 0 9.2 9.2L4.7 6.1zm1.4-1.4 9.2 9.2A6 6 0 0 0 6.1 4.7z',
+  unlock:'M10 2a4 4 0 0 1 4 4h-2a2 2 0 1 0-4 0v3h7a1 1 0 0 1 1 1v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2v-6a1 1 0 0 1 1-1h1V6a4 4 0 0 1 4-4zm0 9.5a1.5 1.5 0 0 0-.8 2.8V15a.8.8 0 0 0 1.6 0v-.7a1.5 1.5 0 0 0-.8-2.8z',
+  logout:'M11 3a1 1 0 0 1 0 2H6v10h5a1 1 0 1 1 0 2H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h6zm3.3 3.3 3 3a1 1 0 0 1 0 1.4l-3 3a1 1 0 0 1-1.4-1.4l1.3-1.3H9a1 1 0 1 1 0-2h5.2l-1.3-1.3a1 1 0 0 1 1.4-1.4z',
+  globe:'M10 2a8 8 0 1 1 0 16 8 8 0 0 1 0-16zm2.4 9H7.6c.2 2 .9 3.8 2.4 5 1.5-1.2 2.2-3 2.4-5zM6 11H4.1a6 6 0 0 0 3.4 4.6A9.6 9.6 0 0 1 6 11zm9.9 0H14a9.6 9.6 0 0 1-1.5 4.6A6 6 0 0 0 15.9 11zM7.5 4.4A6 6 0 0 0 4.1 9H6c.1-1.7.6-3.3 1.5-4.6zM10 4C8.5 5.2 7.8 7 7.6 9h4.8C12.2 7 11.5 5.2 10 4zm2.5.4C13.4 5.7 13.9 7.3 14 9h1.9a6 6 0 0 0-3.4-4.6z',
+  selectall:'M3 5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5zm2 0v8h8V5H5zm12 1a1 1 0 0 1 1 1v8a3 3 0 0 1-3 3H8a1 1 0 1 1 0-2h7a1 1 0 0 0 1-1V7a1 1 0 0 1 1-1z',
+  list:'M3 5h14v1.8H3V5zm0 4.1h14v1.8H3V9.1zm0 4.1h14V15H3v-1.8z',
+  refresh:'M10 3a7 7 0 0 1 6.3 4H18a1 1 0 0 1 1 1.3l-1.2 3.2a1 1 0 0 1-1.7.3L13.6 9a1 1 0 0 1 .8-1.7h.3A5 5 0 1 0 15 12.4a1 1 0 0 1 1.8.9A7 7 0 1 1 10 3z',
+  game:'M7 5h6a5 5 0 0 1 5 5c0 2.8-2 5-4.5 5-1 0-1.9-.5-2.5-1.2-.3-.4-.7-.8-1-.8s-.7.4-1 .8C8.4 14.5 7.5 15 6.5 15 4 15 2 12.8 2 10a5 5 0 0 1 5-5zm-.5 2.5a.8.8 0 0 0-.8.8v.9h-.9a.8.8 0 0 0 0 1.6h.9v.9a.8.8 0 0 0 1.6 0v-.9h.9a.8.8 0 0 0 0-1.6h-.9v-.9a.8.8 0 0 0-.8-.8zm7 .3a1 1 0 1 0 0 2 1 1 0 0 0 0-2zm2 2.4a1 1 0 1 0 0 2 1 1 0 0 0 0-2z',
+};
+const ic = n => '<svg class="ico" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path d="'+PATHS[n]+'"/></svg>';
 
 /* ---------------- i18n ---------------- */
 const I18N = {
@@ -237,7 +290,7 @@ const I18N = {
     confirmUsers:n=>`¿Borrar ${n} usuarios (con sus niveles y comentarios)?`,
     drawing:"dibujo", stamp:"sello", noText:"(sin texto)",
     initialComment:"Comentario inicial", noInitialComment:"(sin comentario inicial)",
-    community:"Comunidad", nintendo:"Nintendo (oficial)", usersCommunity:"Usuarios",
+    community:"Comunidad", nintendo:"Oficial", usersCommunity:"Usuarios",
     doors:"Puertas", multiDoor:"Varias puertas", oneDoor:n=>`${n} puerta${n===1?'':'s'}`,
     goalScore:"Puntos meta", dimensions:"Dimensiones", theme:"Tema",
     dataIds:"IDs de datos", published:"Publicado", joined:"se unió", id:"id",
@@ -252,7 +305,7 @@ const I18N = {
     navLevels:"Levels", navComments:"Comments", navUsers:"Users", navSettings:"Settings",
     refresh:"Refresh", login:"Admin login",
     loginHint:"Enter the server's admin token (printed in the console / data/admin-token.txt).",
-    tokenPh:"admin token", enter:"Enter", invalidToken:"Invalid token",
+    tokenPh:"admin token", enter:"Sign in", invalidToken:"Invalid token",
     selected:"selected", deleteSel:"Delete selected", clearSel:"Clear",
     selectAll:"Select all",
     noLevels:"No levels uploaded yet.", noComments:"No comments yet.", noUsers:"No users yet.",
@@ -269,14 +322,14 @@ const I18N = {
     confirmUsers:n=>`Delete ${n} users (with their levels and comments)?`,
     drawing:"drawing", stamp:"stamp", noText:"(no text)",
     initialComment:"Initial comment", noInitialComment:"(no initial comment)",
-    community:"Community", nintendo:"Nintendo (official)", usersCommunity:"Users",
+    community:"Community", nintendo:"Official", usersCommunity:"Users",
     doors:"Doors", multiDoor:"Multiple doors", oneDoor:n=>`${n} door${n===1?'':'s'}`,
     goalScore:"Goal score", dimensions:"Dimensions", theme:"Theme",
     dataIds:"Data IDs", published:"Published", joined:"joined", id:"id",
     commentsThread:"Comment thread", noCommentsLevel:"No comments.",
     settings:"Settings", language:"Language", langDesc:"Choose the panel language.",
     session:"Session", sessionDesc:"Sign out of the admin panel on this browser.",
-    logout:"Log out", about:"About", serverVersion:"Server version",
+    logout:"Sign out", about:"About", serverVersion:"Server version",
     spanish:"Español", english:"English",
   }
 };
@@ -305,11 +358,11 @@ async function load(){
 function renderLogin(err){
   $('#modal').innerHTML=''; clearSel();
   $('#app').innerHTML = `<div class="login-wrap"><div class="login">
-    <div class="logo">${ic('shield_person')}</div>
+    <div class="logo">${ic('game')}</div>
     <h2>${t('login')}</h2><p>${t('loginHint')}</p>
     ${err?`<div class="err">${esc(err)}</div>`:''}
     <div class="field"><input type="password" id="tok" placeholder="${t('tokenPh')}" value="${esc(token())}"></div>
-    <button class="btn filled" id="go">${t('enter')}</button>
+    <button class="btn primary" id="go">${t('enter')}</button>
   </div></div>`;
   $('#go').onclick = ()=>{ localStorage.setItem('mvdk_admin_token',$('#tok').value.trim()); load(); };
   $('#tok').onkeydown = e=>{ if(e.key==='Enter') $('#go').click(); };
@@ -319,40 +372,40 @@ function renderLogin(err){
 /* ---------------- shell ---------------- */
 function render(){
   $('#app').innerHTML = `
-  <div class="topbar">
-    <div class="logo">${ic('stadia_controller')}</div>
+  <div class="titlebar">
+    <div class="logo">${ic('game')}</div>
     <div><h1>MvDK Community</h1><div class="sub">${t('appSub')}</div></div>
     <div class="spacer"></div>
-    <div class="stats">
-      <span class="chip-stat">${ic('person')}<b>${data.users.length}</b> ${t('users')}</span>
-      <span class="chip-stat">${ic('grid_view')}<b>${data.levels.length}</b> ${t('levels')}</span>
-      <span class="chip-stat">${ic('chat_bubble')}<b>${data.comments.length}</b> ${t('comments')}</span>
+    <div class="stats" style="display:flex;gap:6px">
+      <span class="stat">${ic('person')}<b>${data.users.length}</b> ${t('users')}</span>
+      <span class="stat">${ic('grid')}<b>${data.levels.length}</b> ${t('levels')}</span>
+      <span class="stat">${ic('chat')}<b>${data.comments.length}</b> ${t('comments')}</span>
     </div>
-    <button class="icon-btn" id="refresh" title="${t('refresh')}">${ic('refresh')}</button>
+    <button class="iconbtn" id="refresh" title="${t('refresh')}">${ic('refresh')}</button>
   </div>
-  <nav class="tabs">
-    <button class="tab" data-tab="levels">${ic('grid_view')}${t('navLevels')}</button>
-    <button class="tab" data-tab="comments">${ic('chat_bubble')}${t('navComments')}</button>
-    <button class="tab" data-tab="users">${ic('group')}${t('navUsers')}</button>
-    <button class="tab" data-tab="settings">${ic('settings')}${t('navSettings')}</button>
+  <nav class="pivots">
+    <button class="pivot" data-tab="levels">${ic('grid')}${t('navLevels')}</button>
+    <button class="pivot" data-tab="comments">${ic('chat')}${t('navComments')}</button>
+    <button class="pivot" data-tab="users">${ic('person')}${t('navUsers')}</button>
+    <button class="pivot" data-tab="settings">${ic('gear')}${t('navSettings')}</button>
   </nav>
   <main id="list"></main>`;
   $('#refresh').onclick=load;
-  document.querySelectorAll('nav .tab').forEach(b=>{
+  document.querySelectorAll('.pivot').forEach(b=>{
     b.classList.toggle('active',b.dataset.tab===tab);
     b.onclick=()=>{ tab=b.dataset.tab; clearSel(); render(); };
   });
   renderList();
 }
 
-/* ---------------- selection bar ---------------- */
-function selBar(kind, total){
+/* ---------------- selection ---------------- */
+function selBar(kind){
   const set = sel[kind]; if(!set.size) return '';
   return `<div class="selbar">
-    <b>${set.size}</b> ${t('selected')}
+    <b>${set.size} ${t('selected')}</b>
     <div class="spacer"></div>
-    <button class="btn text" onclick="clearSelection('${kind}')">${t('clearSel')}</button>
-    <button class="btn danger" onclick="deleteSelected('${kind}')">${ic('delete')}${t('deleteSel')}</button>
+    <button class="btn subtle sm" onclick="clearSelection('${kind}')">${t('clearSel')}</button>
+    <button class="btn danger sm" onclick="deleteSelected('${kind}')">${ic('trash')}${t('deleteSel')}</button>
   </div>`;
 }
 window.clearSelection = (kind)=>{ sel[kind].clear(); renderList(); };
@@ -372,7 +425,7 @@ window.deleteSelected = async (kind)=>{
 function check(kind,id){ const on=sel[kind].has(id);
   return `<div class="check ${on?'on':''}" onclick="event.stopPropagation();toggleSel('${kind}','${id}')">${on?ic('check'):''}</div>`; }
 
-/* ---------------- list ---------------- */
+/* ---------------- lists ---------------- */
 function renderList(){
   const el=$('#list'); let h='';
   if(tab==='settings'){ el.innerHTML=renderSettings(); bindSettings(); return; }
@@ -384,14 +437,14 @@ function renderList(){
   h += `<div class="section-head"><h2>${title}</h2><div class="spacer"></div>`;
   if(tab==='comments'){
     h += `<div class="segmented">
-      <button class="${commentView==='list'?'active':''}" onclick="setCmtView('list')">${ic('view_agenda')}${t('viewList')}</button>
-      <button class="${commentView==='grid'?'active':''}" onclick="setCmtView('grid')">${ic('grid_view')}${t('viewGrid')}</button></div>`;
+      <button class="${commentView==='list'?'active':''}" onclick="setCmtView('list')">${ic('list')}${t('viewList')}</button>
+      <button class="${commentView==='grid'?'active':''}" onclick="setCmtView('grid')">${ic('grid')}${t('viewGrid')}</button></div>`;
   }
-  if(arr.length) h += `<button class="btn text" onclick="toggleAll('${tab}')">${ic('select_all')}${t('selectAll')}</button>`;
+  if(arr.length) h += `<button class="btn subtle sm" onclick="toggleAll('${tab}')">${ic('selectall')}${t('selectAll')}</button>`;
   h += `</div>`;
-  h += selBar(tab, arr.length);
+  h += selBar(tab);
 
-  if(!arr.length){ el.innerHTML = h+`<div class="empty">${ic(tab==='levels'?'grid_view':tab==='comments'?'forum':'group')}${t(noneKey)}</div>`; return; }
+  if(!arr.length){ el.innerHTML = h+`<div class="empty">${ic(tab==='levels'?'grid':tab==='comments'?'chat':'person')}${t(noneKey)}</div>`; return; }
 
   if(tab==='levels') h += data.levels.map(levelCard).join('');
   else if(tab==='comments') h += `<div class="${commentView==='grid'?'cmt-grid':'cmt-list'}">`+data.comments.map(commentCard).join('')+`</div>`;
@@ -413,16 +466,16 @@ function levelCard(l){
         <span class="meta-stat">👍 ${l.stars} ${t('likes')}</span>
         <span class="meta-stat">⭐ ${l.tips||0} ${t('stars')}</span>
         <span class="meta-stat">${ic('download')}${l.downloads||0}</span>
-        <span class="meta-stat">${ic('chat_bubble')}${l.comments||0}</span>
+        <span class="meta-stat">${ic('chat')}${l.comments||0}</span>
       </div>
       ${l.params?`<div class="sub-line"><span>${l.params.multiDoor?t('multiDoor'):t('oneDoor',l.params.doors||1)}</span><span>${l.params.width}×${l.params.height}</span><span>${esc(l.params.theme||'')}</span></div>`:''}
-      ${(l.body||l.memo)?`<div class="sub-line"><span>${ic('chat')} ${l.memo?`🎨 ${t('drawing')}`:esc(l.body).slice(0,80)}</span></div>`:''}
+      ${(l.body||l.memo)?`<div class="sub-line"><span class="meta-stat">${ic('chat')} ${l.memo?`🎨 ${t('drawing')}`:esc(l.body).slice(0,80)}</span></div>`:''}
     </div>
     <div class="acts">
-      <button class="btn small tonal ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${ic('verified')}${l.official?t('unofficial'):t('makeOfficial')}</button>
-      <button class="btn small outlined" onclick="dlLevel('${l.id}')">${ic('download')}</button>
-      <button class="btn small tonal" onclick="hideLevel('${l.id}',${!l.hidden})">${ic(l.hidden?'visibility':'visibility_off')}</button>
-      <button class="btn small danger" onclick="delLevel('${l.id}')">${ic('delete')}</button>
+      <button class="btn sm ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${ic('star')}${l.official?t('unofficial'):t('makeOfficial')}</button>
+      <button class="btn sm" title="${t('download')}" onclick="dlLevel('${l.id}')">${ic('download')}</button>
+      <button class="btn sm" title="${l.hidden?t('unhide'):t('hide')}" onclick="hideLevel('${l.id}',${!l.hidden})">${ic(l.hidden?'eye':'eyeoff')}</button>
+      <button class="btn danger sm" title="${t('del')}" onclick="delLevel('${l.id}')">${ic('trash')}</button>
     </div></div>`;
 }
 
@@ -430,11 +483,9 @@ function commentCard(c){
   const s=sel.comments.has(c.id);
   const ava = c.userAvatar?`<img class="cmt-ava" src="${c.userAvatar}" onerror="this.style.visibility='hidden'">`:`<div class="cmt-ava"></div>`;
   let content;
-  if(c.memo) content = `<img class="drawing" src="${c.memo}" style="image-rendering:pixelated" onclick="viewMemo('${c.memo}')">`;
+  if(c.memo) content = `<img class="drawing" src="${c.memo}" onclick="viewMemo('${c.memo}')" onerror="this.style.visibility='hidden'">`;
   else if(c.stamp) content = `<div class="stamp">🔖</div>`;
-  else content = `<div class="text">${c.text?esc(c.text):`<i style="color:var(--on-surface-var)">${t('noText')}</i>`}</div>`;
-  // if both drawing/stamp AND text exist, show text alongside
-  const extraText = (c.memo||c.stamp) && c.text ? `<div class="text">${esc(c.text)}</div>` : '';
+  else content = `<div class="text">${c.text?esc(c.text):`<i style="color:var(--text-3)">${t('noText')}</i>`}</div>`;
   return `<div class="cmt-card ${s?'sel':''} ${c.hidden?'dim':''}">
     <div class="cmt-top">
       ${check('comments',c.id)}
@@ -442,11 +493,12 @@ function commentCard(c){
       <div class="cmt-who"><b>${esc(c.userName)}</b><small>${dt(c.createdAt)}</small></div>
       ${c.hidden?`<span class="badge hidden">${t('hidden')}</span>`:''}
     </div>
-    <div class="cmt-content">${content}${extraText}</div>
+    <div class="cmt-content">${content}</div>
+    <div class="cmt-extra">${(c.memo||c.stamp)&&c.text?esc(c.text):''}</div>
     <div class="cmt-foot">
-      <div class="where">${ic('grid_view')} <b>${esc(c.levelTitle||c.levelId)}</b></div>
-      <button class="btn small tonal" onclick="hideComment('${c.id}',${!c.hidden})">${ic(c.hidden?'visibility':'visibility_off')}</button>
-      <button class="btn small danger" onclick="delComment('${c.id}')">${ic('delete')}</button>
+      <div class="where">${ic('grid')}<span><b>${esc(c.levelTitle||c.levelId)}</b></span></div>
+      <button class="btn sm" title="${c.hidden?t('unhide'):t('hide')}" onclick="hideComment('${c.id}',${!c.hidden})">${ic(c.hidden?'eye':'eyeoff')}</button>
+      <button class="btn danger sm" title="${t('del')}" onclick="delComment('${c.id}')">${ic('trash')}</button>
     </div></div>`;
 }
 
@@ -460,8 +512,8 @@ function userCard(u){
       <div class="sub-line"><span>${t('id')} ${esc(u.id)}</span><span>${t('joined')} ${dt(u.createdAt)}</span></div>
     </div>
     <div class="acts">
-      <button class="btn small tonal" onclick="banUser('${u.id}',${!u.banned})">${ic(u.banned?'lock_open':'block')}${u.banned?t('unban'):t('ban')}</button>
-      <button class="btn small danger" onclick="delUser('${u.id}')">${ic('delete')}</button>
+      <button class="btn sm" onclick="banUser('${u.id}',${!u.banned})">${ic(u.banned?'unlock':'ban')}${u.banned?t('unban'):t('ban')}</button>
+      <button class="btn danger sm" title="${t('del')}" onclick="delUser('${u.id}')">${ic('trash')}</button>
     </div></div>`;
 }
 
@@ -471,8 +523,8 @@ function renderSettings(){
   <div class="settings-card">
     <h3>${t('language')}</h3><p>${t('langDesc')}</p>
     <div class="segmented" id="langseg">
-      <button data-lang="es" class="${lang==='es'?'active':''}">${ic('translate')}${t('spanish')}</button>
-      <button data-lang="en" class="${lang==='en'?'active':''}">${ic('translate')}${t('english')}</button>
+      <button data-lang="es" class="${lang==='es'?'active':''}">${ic('globe')}${t('spanish')}</button>
+      <button data-lang="en" class="${lang==='en'?'active':''}">${ic('globe')}${t('english')}</button>
     </div>
   </div>
   <div class="settings-card">
@@ -481,7 +533,7 @@ function renderSettings(){
   </div>
   <div class="settings-card">
     <h3>${t('about')}</h3>
-    <div class="kv"><span class="k">${t('serverVersion')}</span><span class="v">${esc(serverVersion||'—')}</span></div>
+    <div class="kv" style="margin:8px 0 0"><span class="k">${t('serverVersion')}</span><span class="v">${esc(serverVersion||'—')}</span></div>
   </div>`;
 }
 function bindSettings(){
@@ -495,8 +547,8 @@ function bindSettings(){
 /* ---------------- modal / detail ---------------- */
 function closeModal(){ $('#modal').innerHTML=''; }
 window.setCmtView=(v)=>{ commentView=v; localStorage.setItem('mvdk_admin_cmtview',v); renderList(); };
-window.viewMemo=(src)=>{ $('#modal').innerHTML=`<div class="scrim" onclick="closeModal()"><div class="dialog" style="max-width:460px" onclick="event.stopPropagation()">
-  <div class="dialog-head"><h2>${t('drawing')}</h2><button class="icon-btn" onclick="closeModal()">${ic('close')}</button></div>
+window.viewMemo=(src)=>{ $('#modal').innerHTML=`<div class="scrim" onclick="closeModal()"><div class="dialog" style="max-width:440px" onclick="event.stopPropagation()">
+  <div class="dialog-head"><h2>${t('drawing')}</h2><button class="iconbtn" onclick="closeModal()">${ic('close')}</button></div>
   <div class="dialog-body"><img class="preview" style="image-rendering:pixelated;max-width:100%" src="${src}"></div></div></div>`; };
 
 window.openLevel = async (id)=>{
@@ -505,26 +557,25 @@ window.openLevel = async (id)=>{
   const thread=(l.comments||[]).map(c=>{
     const ava=c.userAvatar?`<img class="cmt-ava" src="${c.userAvatar}" onerror="this.style.visibility='hidden'">`:`<div class="cmt-ava"></div>`;
     let body;
-    if(c.memo) body=`<img class="drawing" style="image-rendering:pixelated" src="${c.memo}" onclick="viewMemo('${c.memo}')">`;
+    if(c.memo) body=`<img class="drawing" src="${c.memo}" onclick="viewMemo('${c.memo}')">`;
     else if(c.stamp) body=`<span class="stamp">🔖</span>`;
     else body=`<div class="txt">${esc(c.text||'')}</div>`;
     const extra=(c.memo||c.stamp)&&c.text?`<div class="txt" style="margin-top:4px">${esc(c.text)}</div>`:'';
     return `<div class="bubble">${ava}<div class="body">
-      <button class="btn small danger delc" onclick="delCommentReload('${c.id}','${id}')">${ic('delete')}</button>
+      <button class="btn danger sm delc" onclick="delCommentReload('${c.id}','${id}')">${ic('trash')}</button>
       <div class="who"><b>${esc(c.userName)}</b><small>${dt(c.createdAt)}</small>${c.hidden?`<span class="badge hidden">${t('hidden')}</span>`:''}</div>
       ${body}${extra}</div></div>`;
-  }).join('') || `<p style="color:var(--on-surface-var)">${t('noCommentsLevel')}</p>`;
-  // The author's initial comment (the post "OP") shown first, highlighted.
+  }).join('') || `<p style="color:var(--text-3)">${t('noCommentsLevel')}</p>`;
   const opAva=l.authorAvatar?`<img class="cmt-ava" src="${l.authorAvatar}" onerror="this.style.visibility='hidden'">`:`<div class="cmt-ava"></div>`;
   let opBody;
-  if(l.memo) opBody=`<img class="drawing" style="image-rendering:pixelated" src="${l.memo}" onclick="viewMemo('${l.memo}')">`;
-  else opBody=`<div class="txt">${l.body?esc(l.body):`<i style="color:var(--on-surface-var)">${t('noInitialComment')}</i>`}</div>`;
+  if(l.memo) opBody=`<img class="drawing" src="${l.memo}" onclick="viewMemo('${l.memo}')">`;
+  else opBody=`<div class="txt">${l.body?esc(l.body):`<i style="color:var(--text-3)">${t('noInitialComment')}</i>`}</div>`;
   const opExtra=l.memo&&l.body?`<div class="txt" style="margin-top:4px">${esc(l.body)}</div>`:'';
-  const opBubble=`<div class="bubble">${opAva}<div class="body" style="background:var(--primary-container);border-radius:16px">
+  const opBubble=`<div class="bubble op">${opAva}<div class="body">
     <div class="who"><b>${esc(l.authorName)}</b><span class="badge official">${t('initialComment')}</span><small>${dt(l.createdAt)}</small></div>
     ${opBody}${opExtra}</div></div>`;
   $('#modal').innerHTML=`<div class="scrim" onclick="closeModal()"><div class="dialog" onclick="event.stopPropagation()">
-    <div class="dialog-head"><h2>${esc(l.title)}</h2>${l.official?`<span class="badge official">${t('official')}</span>`:''}<button class="icon-btn" onclick="closeModal()">${ic('close')}</button></div>
+    <div class="dialog-head"><h2>${esc(l.title)}</h2>${l.official?`<span class="badge official">${t('official')}</span>`:''}<button class="iconbtn" onclick="closeModal()">${ic('close')}</button></div>
     <div class="dialog-body">
       <div class="sub-line" style="margin-bottom:8px">${t('by')} ${esc(l.authorName)}</div>
       ${l.thumbnail?`<img class="preview" src="${l.thumbnail}">`:''}
@@ -540,10 +591,10 @@ window.openLevel = async (id)=>{
         <span class="k">${t('dataIds')}</span><span class="v">${esc(l.primaryID||'—')}${l.secondaryID?(' / '+esc(l.secondaryID)):''}</span>
         <span class="k">${t('published')}</span><span class="v">${dt(l.createdAt)}</span>
       </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">
-        <button class="btn tonal ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${ic('verified')}${l.official?t('unofficial'):t('makeOfficial')}</button>
-        <button class="btn outlined" onclick="dlLevel('${l.id}')">${ic('download')}${t('download')}</button>
-        <button class="btn danger" onclick="delLevel('${l.id}')">${ic('delete')}${t('del')}</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px">
+        <button class="btn ${l.official?'on':''}" onclick="setOfficial('${l.id}',${!l.official})">${ic('star')}${l.official?t('unofficial'):t('makeOfficial')}</button>
+        <button class="btn" onclick="dlLevel('${l.id}')">${ic('download')}${t('download')}</button>
+        <button class="btn danger" onclick="delLevel('${l.id}')">${ic('trash')}${t('del')}</button>
       </div>
       <h3>${t('commentsThread')} (${(l.comments||[]).length})</h3>
       <div class="thread">${opBubble}${thread}</div>
