@@ -336,7 +336,7 @@ def extract_world_music(out: Path, ffmpeg: str, prog: Progress, incremental: boo
             return "%s not found; skipping per-world level-select music." % LEVEL_SELECT_FULL
         return ("ffmpeg not found on PATH; skipping per-world level-select music. "
                 "Install ffmpeg and re-run to enable it.")
-    for world in range(1, WORLD_TRACK_COUNT + 1):
+    def extract_one(world):
         left = 2 * (world - 1)
         right = left + 1
         dst = out / "audio" / "sounds" / ("level_select_world_%d.ogg" % world)
@@ -344,11 +344,22 @@ def extract_world_music(out: Path, ffmpeg: str, prog: Progress, incremental: boo
                "-af", "pan=stereo|c0=c%d|c1=c%d" % (left, right),
                "-c:a", "libvorbis", "-q:a", "6", str(dst)]
         res = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        prog.update(world / WORLD_TRACK_COUNT)
         if res.returncode != 0:
             return ("ffmpeg failed for world %d: %s"
                     % (world, res.stderr.decode("utf-8", "replace").strip()))
-    return None
+        return None
+
+    # The 7 tracks are independent ffmpeg runs on separate output files, so
+    # extract them in parallel instead of one after another.
+    err = None
+    with concurrent.futures.ThreadPoolExecutor(max_workers=WORLD_TRACK_COUNT) as ex:
+        futures = [ex.submit(extract_one, w) for w in range(1, WORLD_TRACK_COUNT + 1)]
+        for n, f in enumerate(concurrent.futures.as_completed(futures), 1):
+            e = f.result()
+            if e and not err:
+                err = e
+            prog.update(n / WORLD_TRACK_COUNT)
+    return err
 
 
 def _find_game_icon(src: Path):
