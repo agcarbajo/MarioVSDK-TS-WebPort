@@ -20,7 +20,7 @@ const crypto = require("crypto");
 const PORT = parseInt(process.env.PORT || "8080", 10);
 const HOST = process.env.HOST || "0.0.0.0";
 const SERVER_NAME = process.env.SERVER_NAME || "MvDK Community Server";
-const VERSION = "1.0.0";
+const VERSION = "1.0.1";
 
 const DATA_DIR = path.join(__dirname, "data");
 const DB_FILE = path.join(DATA_DIR, "db.json");
@@ -44,14 +44,23 @@ if (fs.existsSync(DB_FILE)) {
     catch (e) { console.error("Could not read db.json, starting fresh:", e.message); }
 }
 let saveTimer = null;
+function flushDb() {
+    if (saveTimer) { clearTimeout(saveTimer); saveTimer = null; }
+    const tmp = DB_FILE + ".tmp";
+    fs.writeFileSync(tmp, JSON.stringify(db, null, 2));
+    fs.renameSync(tmp, DB_FILE);
+}
 function saveDb() {
     if (saveTimer) return;
-    saveTimer = setTimeout(() => {
-        saveTimer = null;
-        const tmp = DB_FILE + ".tmp";
-        fs.writeFileSync(tmp, JSON.stringify(db, null, 2));
-        fs.renameSync(tmp, DB_FILE);
-    }, 50);
+    saveTimer = setTimeout(() => { saveTimer = null; flushDb(); }, 50);
+}
+// The debounced save means the last write can still be pending when the
+// process is stopped (Ctrl+C, service stop). Flush it so no change is lost.
+for (const sig of ["SIGINT", "SIGTERM"]) {
+    process.on(sig, () => {
+        try { flushDb(); } catch (e) {}
+        process.exit(0);
+    });
 }
 
 // One-time migration: older clients published the initial comment as a separate
@@ -136,30 +145,53 @@ function readBody(req) {
     });
 }
 
+// token -> user index so auth is O(1) instead of scanning every user on each
+// authenticated request. Kept in sync on user create/delete.
+const tokenIndex = new Map();
+for (const u of Object.values(db.users)) if (u.token) tokenIndex.set(u.token, u.id);
+
 function userByToken(req) {
     const auth = req.headers["authorization"] || "";
     const token = auth.replace(/^Bearer\s+/i, "").trim();
     if (!token) return null;
-    return Object.values(db.users).find((u) => u.token === token) || null;
+    const uid = tokenIndex.get(token);
+    return (uid && db.users[uid]) || null;
+}
+// Constant-time comparison (via fixed-length digests) so the admin token can't
+// be probed byte-by-byte through response timing.
+function safeEqual(a, b) {
+    const ha = crypto.createHash("sha256").update(String(a)).digest();
+    const hb = crypto.createHash("sha256").update(String(b)).digest();
+    return crypto.timingSafeEqual(ha, hb);
 }
 function isAdmin(req) {
     const t = (req.headers["x-admin-token"] || "").trim() ||
         (req.headers["authorization"] || "").replace(/^Bearer\s+/i, "").trim();
-    return t && t === ADMIN_TOKEN;
+    return !!t && safeEqual(t, ADMIN_TOKEN);
 }
 
 function publicUser(u) {
     return u && { id: u.id, name: u.name, avatar: u.avatar ? "/avatars/" + u.id + ".png" : null,
                   createdAt: u.createdAt, banned: !!u.banned };
 }
-function publicLevel(l, includeData) {
+// Visible-comment count per level. Pass the result to publicLevel when mapping
+// many levels so the comment table is scanned once, not once per level.
+function commentCounts() {
+    const counts = {};
+    for (const c of Object.values(db.comments)) {
+        if (!c.hidden) counts[c.levelId] = (counts[c.levelId] || 0) + 1;
+    }
+    return counts;
+}
+function publicLevel(l, includeData, counts) {
     const out = {
         id: l.id, title: l.title, authorId: l.authorId, authorName: l.authorName,
         createdAt: l.createdAt, stars: (l.starredBy || []).length, downloads: l.downloads || 0,
         tips: l.tips || 0,
         // The initial comment the author wrote when publishing (the post "OP").
         body: l.body || "", memo: l.memo ? "/levels/" + l.id + ".memo.png" : null,
-        comments: Object.values(db.comments).filter((c) => c.levelId === l.id && !c.hidden).length,
+        comments: counts ? (counts[l.id] || 0)
+                         : Object.values(db.comments).filter((c) => c.levelId === l.id && !c.hidden).length,
         thumbnail: l.thumbnail ? "/levels/" + l.id + ".thumb.png" : null,
         hidden: !!l.hidden, official: !!l.official, native: !!l.native, communityType: l.communityType,
         params: l.params || null,
@@ -209,6 +241,7 @@ route("POST", "/api/users", async (req, res) => {
         u.avatar = true;
     }
     db.users[uid] = u;
+    tokenIndex.set(u.token, uid);
     saveDb();
     ok(res, { id: u.id, token: u.token, name: u.name, avatar: publicUser(u).avatar });
 });
@@ -259,7 +292,8 @@ route("GET", "/api/levels", async (req, res, params, query) => {
     else list.sort((a, b) => b.createdAt - a.createdAt);
     const offset = parseInt(query.offset || "0", 10);
     const limit = Math.min(parseInt(query.limit || "50", 10), 100);
-    ok(res, { total: list.length, levels: list.slice(offset, offset + limit).map((l) => publicLevel(l, false)) });
+    const counts = commentCounts();
+    ok(res, { total: list.length, levels: list.slice(offset, offset + limit).map((l) => publicLevel(l, false, counts)) });
 });
 
 route("GET", "/api/levels/:id", async (req, res, params) => {
@@ -324,9 +358,25 @@ route("POST", "/api/levels/:id/comments", async (req, res, params) => {
 
 function writeB64(file, b64) {
     fs.writeFileSync(file, Buffer.from(b64 || "", "base64"));
+    b64Cache.delete(file);
 }
+// The native level list re-serves every level's appData/screenshot on each
+// request. Those files are written once and never modified, so cache their
+// base64 in memory keyed by mtime+size: repeat requests cost a stat() instead
+// of a full read + re-encode per file.
+const b64Cache = new Map();
 function readB64(file) {
-    try { return fs.readFileSync(file).toString("base64"); } catch (e) { return null; }
+    try {
+        const st = fs.statSync(file);
+        const hit = b64Cache.get(file);
+        if (hit && hit.mtime === st.mtimeMs && hit.size === st.size) return hit.b64;
+        const b64 = fs.readFileSync(file).toString("base64");
+        b64Cache.set(file, { mtime: st.mtimeMs, size: st.size, b64 });
+        return b64;
+    } catch (e) {
+        b64Cache.delete(file);
+        return null;
+    }
 }
 
 route("POST", "/api/native/levels", async (req, res) => {
@@ -479,7 +529,9 @@ function deleteLevelCascade(id) {
     return true;
 }
 function deleteUserCascade(id) {
-    if (!db.users[id]) return false;
+    const u = db.users[id];
+    if (!u) return false;
+    if (u.token) tokenIndex.delete(u.token);
     // their levels (and the comments on those levels)
     for (const lid of Object.keys(db.levels)) {
         if (db.levels[lid].authorId === id) deleteLevelCascade(lid);
@@ -493,9 +545,10 @@ function deleteUserCascade(id) {
 }
 route("GET", "/api/admin/overview", async (req, res) => {
     if (!requireAdmin(req, res)) return;
+    const counts = commentCounts();
     ok(res, {
         users: Object.values(db.users).map(publicUser),
-        levels: Object.values(db.levels).sort((a, b) => b.createdAt - a.createdAt).map((l) => publicLevel(l, false)),
+        levels: Object.values(db.levels).sort((a, b) => b.createdAt - a.createdAt).map((l) => publicLevel(l, false, counts)),
         comments: Object.values(db.comments).sort((a, b) => b.createdAt - a.createdAt)
             .map((c) => ({ id: c.id, levelId: c.levelId, userId: c.userId, userName: c.userName,
                            text: c.text, createdAt: c.createdAt, hidden: !!c.hidden,
@@ -614,10 +667,23 @@ const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; cha
     ".css": "text/css; charset=utf-8", ".png": "image/png", ".json": "application/json",
     ".svg": "image/svg+xml", ".jpg": "image/jpeg" };
 
-function serveFile(res, file) {
-    fs.readFile(file, (err, data) => {
-        if (err) return send(res, 404, "Not found", { "Content-Type": "text/plain" });
-        send(res, 200, data, { "Content-Type": MIME[path.extname(file).toLowerCase()] || "application/octet-stream" });
+function serveFile(req, res, file) {
+    // Conditional GET via a weak mtime/size ETag: browsers revalidate instead of
+    // re-downloading avatars/thumbnails/drawings on every panel refresh, but an
+    // updated file (same URL, e.g. a changed avatar) is still picked up.
+    fs.stat(file, (serr, st) => {
+        if (serr || !st.isFile()) return send(res, 404, "Not found", { "Content-Type": "text/plain" });
+        const etag = 'W/"' + st.size + "-" + Math.floor(st.mtimeMs) + '"';
+        if (req.headers["if-none-match"] === etag) {
+            return send(res, 304, null, { ETag: etag, "Cache-Control": "no-cache" });
+        }
+        fs.readFile(file, (err, data) => {
+            if (err) return send(res, 404, "Not found", { "Content-Type": "text/plain" });
+            send(res, 200, data, {
+                "Content-Type": MIME[path.extname(file).toLowerCase()] || "application/octet-stream",
+                ETag: etag, "Cache-Control": "no-cache",
+            });
+        });
     });
 }
 
@@ -628,7 +694,9 @@ const server = http.createServer(async (req, res) => {
         const u = new URL(req.url, "http://localhost");
         const pathname = u.pathname;
 
-        if (req.method === "OPTIONS") return send(res, 204, "");
+        // Let browsers cache the CORS preflight for a day instead of paying an
+        // extra OPTIONS round-trip before every API call.
+        if (req.method === "OPTIONS") return send(res, 204, "", { "Access-Control-Max-Age": "86400" });
 
         // API routes
         for (const r of routes) {
@@ -642,13 +710,13 @@ const server = http.createServer(async (req, res) => {
         }
 
         // uploaded avatars / level thumbnails
-        if (pathname.startsWith("/avatars/")) return serveFile(res, path.join(AVATAR_DIR, path.basename(pathname)));
-        if (pathname.startsWith("/levels/")) return serveFile(res, path.join(UPLOAD_DIR, path.basename(pathname)));
-        if (pathname.startsWith("/comments/")) return serveFile(res, path.join(COMMENT_DIR, path.basename(pathname)));
+        if (pathname.startsWith("/avatars/")) return serveFile(req, res, path.join(AVATAR_DIR, path.basename(pathname)));
+        if (pathname.startsWith("/levels/")) return serveFile(req, res, path.join(UPLOAD_DIR, path.basename(pathname)));
+        if (pathname.startsWith("/comments/")) return serveFile(req, res, path.join(COMMENT_DIR, path.basename(pathname)));
 
         // admin panel + static
-        if (pathname === "/" || pathname === "/admin") return serveFile(res, path.join(PUBLIC_DIR, "admin", "index.html"));
-        if (pathname.startsWith("/admin/")) return serveFile(res, path.join(PUBLIC_DIR, "admin", path.basename(pathname)));
+        if (pathname === "/" || pathname === "/admin") return serveFile(req, res, path.join(PUBLIC_DIR, "admin", "index.html"));
+        if (pathname.startsWith("/admin/")) return serveFile(req, res, path.join(PUBLIC_DIR, "admin", path.basename(pathname)));
 
         send(res, 404, { error: "not found" });
     } catch (e) {
