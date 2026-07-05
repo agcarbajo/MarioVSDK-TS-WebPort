@@ -70,17 +70,33 @@
         });
     }
 
-    function createOrUpdateProfile(name, avatarDataUrl) {
-        if (hasProfile()) {
-            return apiFetch("/api/users/me", { method: "PUT", body: { name: name, avatar: avatarDataUrl || undefined } })
-                .then(function (u) { state.name = u.name; if (avatarDataUrl) state.avatar = avatarDataUrl; save(); return u; });
-        }
+    function createProfile(name, avatarDataUrl) {
         return apiFetch("/api/users", { method: "POST", body: { name: name, avatar: avatarDataUrl || undefined } })
             .then(function (u) {
                 state.id = u.id; state.token = u.token; state.name = u.name;
                 if (avatarDataUrl) state.avatar = avatarDataUrl;
                 save(); return u;
             });
+    }
+
+    function createOrUpdateProfile(name, avatarDataUrl) {
+        if (hasProfile()) {
+            return apiFetch("/api/users/me", { method: "PUT", body: { name: name, avatar: avatarDataUrl || undefined } })
+                .then(function (u) { state.name = u.name; if (avatarDataUrl) state.avatar = avatarDataUrl; save(); return u; })
+                .catch(function (e) {
+                    // Stale credentials: the saved token no longer exists on the
+                    // server (account deleted by an admin, server data reset, or a
+                    // different server). Drop them and register a fresh account
+                    // instead of failing with "auth required".
+                    var msg = String(e && e.message || "");
+                    if (msg.indexOf("auth required") !== -1 || msg.indexOf("401") !== -1) {
+                        state.id = ""; state.token = ""; save();
+                        return createProfile(name, avatarDataUrl);
+                    }
+                    throw e;
+                });
+        }
+        return createProfile(name, avatarDataUrl);
     }
 
     // Public REST helpers for the community screens (ready for later wiring).
