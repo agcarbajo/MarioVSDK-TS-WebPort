@@ -1,7 +1,7 @@
 diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.js
 --- a/scripts/ui/ugc/DialogContainer.js
 +++ b/scripts/ui/ugc/DialogContainer.js
-@@ -228,18 +228,62 @@
+@@ -228,18 +228,67 @@
  
          DialogContainer.prototype._openComment = function (btn) {
              if (btn.genericButtonAction(false)) {
@@ -59,6 +59,11 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
 +            } catch (e) {}
 +            ui.ugcSignals.clearData.dispatch('comments');
 +            ui.ugcSignals.getComments.dispatch(ui.ugc.activeFilter, post.dataIndex);
++            // clearData() wiped every comment slot, including the last one that
++            // holds the post's own message (the OP at the top). The reload only
++            // fills the downloaded comments, so re-render the OP here - same as
++            // the game does in _onAddCommentComplete - or it stays a blank gap.
++            this._commentPosY = this._gpComments[this._gpComments.length - 1].refreshMain(post);
 +            // Re-fetch the like/star counts from the server.
 +            if (post.postID && window.ChromiumPortCommunity && window.ChromiumPortCommunity.isReady()) {
 +                window.ChromiumPortCommunity.rest.nativeGetLevel(post.postID).then(function (info) {
@@ -70,7 +75,7 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
              }
          };
  
-@@ -430,6 +474,20 @@
+@@ -430,6 +479,20 @@
  
              this._commentPosY = this._gpComments[this._gpComments.length - 1].refreshMain(post);
  
@@ -91,7 +96,7 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
              btn = this._gpComments[this._gpComments.length - 1].btn;
              if (!ui.ugc.offlineMode && (post.platformType !== pt.ugc.OFFICIAL_PLATFORM_TYPE)) {
                  btn.enable();
-@@ -931,11 +989,17 @@
+@@ -931,11 +994,17 @@
                  this._layoutTVPanes.lvldeet_postText.setText(lib.util.clampComment(this._layoutTVPanes.lvldeet_postText.text));
                  this._layoutTVPanes.lvldeet_postTextContainer.visible = true;
                  this._layoutTVPanes.lvldeet_postImageContainer.visible = false;
