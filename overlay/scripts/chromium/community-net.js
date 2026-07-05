@@ -206,6 +206,39 @@
         if (/^(https?:|data:)/.test(stamp)) return stamp;
         try { return global.ChromiumPortStamps.getImageUrl(stamp) || ""; } catch (e) { return ""; }
     }
+    // Robust memo renderer: preloads the image once (so it's usually ready by
+    // the time the game extracts the comment) and paints a white background
+    // right away, so the bubble never shows black while the image loads. Draws
+    // synchronously when the image is already complete (browser cache on a
+    // refresh) and on load otherwise. full=true -> full-bleed hand-drawn memo;
+    // full=false -> small centred legacy stamp.
+    function makeMemoRenderer(url, full) {
+        var img = null;
+        if (url) { img = new Image(); img.crossOrigin = "anonymous"; img.src = url; }
+        return function (target) {
+            if (!img) return;
+            try {
+                var ctx = (target && target.getContext) ? target.getContext("2d")
+                        : (target && target.drawImage ? target : null);
+                if (!ctx) return;
+                var cw = (ctx.canvas && ctx.canvas.width) || 320,
+                    ch = (ctx.canvas && ctx.canvas.height) || 120;
+                var draw = function () {
+                    try {
+                        ctx.fillStyle = "#fff";
+                        ctx.fillRect(0, 0, cw, ch);
+                        if (full) { ctx.drawImage(img, 0, 0, cw, ch); }
+                        else { var s = Math.min(ch, cw) * 0.7; ctx.drawImage(img, (cw - s) / 2, (ch - s) / 2, s, s); }
+                    } catch (e) {}
+                };
+                // White background immediately: never a black bubble.
+                ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cw, ch);
+                if (img.complete && img.naturalWidth) { draw(); }
+                else { img.addEventListener("load", draw); }
+            } catch (e) {}
+        };
+    }
+
     function buildRawPost(l) {
         return {
             id: l.id,
@@ -228,21 +261,7 @@
             // provider only does this when hasMemo is true and renderMemo draws.
             hasMemo: !!l.memo,
             memo: null,
-            renderMemo: function (target) {
-                if (!l.memo) return;
-                try {
-                    var ctx = (target && target.getContext) ? target.getContext("2d")
-                            : (target && target.drawImage ? target : null);
-                    if (!ctx) return;
-                    var cw = (ctx.canvas && ctx.canvas.width) || 320,
-                        ch = (ctx.canvas && ctx.canvas.height) || 120;
-                    var img = new Image(); img.crossOrigin = "anonymous";
-                    img.onload = function () {
-                        try { ctx.clearRect(0, 0, cw, ch); ctx.drawImage(img, 0, 0, cw, ch); } catch (e) {}
-                    };
-                    img.src = avatarFullUrl(l.memo);
-                } catch (e) {}
-            },
+            renderMemo: makeMemoRenderer(l.memo ? avatarFullUrl(l.memo) : "", true),
             thumbnailSnapshot: l.screenshot ? b64ToBlob(l.screenshot) : null,
             tested: true,
             shared: true
@@ -272,23 +291,7 @@
             hasBodyText: !!c.text,
             body: c.text || "",
             hasMemo: hasMemo,
-            renderMemo: function (target) {
-                if (!hasMemo) return;
-                try {
-                    var ctx = (target && target.getContext) ? target.getContext("2d") : (target && target.drawImage ? target : null);
-                    if (!ctx) return;
-                    var cw = (ctx.canvas && ctx.canvas.width) || 320, ch = (ctx.canvas && ctx.canvas.height) || 120;
-                    var img = new Image(); img.crossOrigin = "anonymous";
-                    img.onload = function () {
-                        try {
-                            ctx.clearRect(0, 0, cw, ch);
-                            if (memoUrl) { ctx.drawImage(img, 0, 0, cw, ch); }
-                            else { var s = Math.min(ch, cw) * 0.7; ctx.drawImage(img, (cw - s) / 2, (ch - s) / 2, s, s); }
-                        } catch (e) {}
-                    };
-                    img.src = memoUrl || stampUrl;
-                } catch (e) {}
-            },
+            renderMemo: makeMemoRenderer(memoUrl || stampUrl, !!memoUrl),
             isSpoiler: false,
             platformType: 0
         };

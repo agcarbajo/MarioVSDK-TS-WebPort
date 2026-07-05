@@ -107,7 +107,22 @@ diff --git a/scripts/ui/ugc/DialogContainer.js b/scripts/ui/ugc/DialogContainer.
              btn = this._gpComments[this._gpComments.length - 1].btn;
              if (!ui.ugc.offlineMode && (post.platformType !== pt.ugc.OFFICIAL_PLATFORM_TYPE)) {
                  btn.enable();
-@@ -931,11 +1005,17 @@
+@@ -541,6 +615,14 @@
+             }
+ 
+             this._gotComments = true;
++
++            // Re-render the post's own message (the OP at the top) whenever a
++            // load completes: a clearData() from a Refresh press between the
++            // request and this completion may have wiped it, which sometimes
++            // left the list without its initial comment. Same pattern the game
++            // uses in _onAddCommentComplete; idempotent when already rendered.
++            this._commentPosY = this._gpComments[this._gpComments.length - 1].refreshMain(ui.ugc.currentPost);
++            nextPosY = this._commentPosY;
+ 
+             for (i = 0; i < ui.ugc.commentCount; ++i) {
+                 comment = ui.ugc.comments[i];
+@@ -931,11 +1013,17 @@
                  this._layoutTVPanes.lvldeet_postText.setText(lib.util.clampComment(this._layoutTVPanes.lvldeet_postText.text));
                  this._layoutTVPanes.lvldeet_postTextContainer.visible = true;
                  this._layoutTVPanes.lvldeet_postImageContainer.visible = false;
