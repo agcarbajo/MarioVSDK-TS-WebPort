@@ -1,5 +1,7 @@
 # Mario vs. Donkey Kong: Tipping Stars — Web (Chromium) Port
 
+<img width="1917" height="1031" alt="image" src="https://github.com/user-attachments/assets/7a5d952a-325b-4ce9-92bc-d9c83fdd8ef2" />
+
 A browser port of the Wii U game **Mario vs. Donkey Kong: Tipping Stars**. It
 runs the original game's code in a modern browser by shimming the Wii U
 Nintendo Web Framework (NWF) APIs, converting the Wii U texture/audio formats
